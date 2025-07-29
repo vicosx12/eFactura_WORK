@@ -80,64 +80,66 @@ ENDDEFINE
 *!*-----------------------------------------------------------------------------
 DEFINE CLASS SAFT_Repository AS Custom
     oCache = NULL
+    oConfig = NULL
 
     FUNCTION Init
-        THIS.oCache = CREATEOBJECT("CacheManager")
+        THIS.oConfig = CREATEOBJECT("ConfigManager")
+        THIS.oCache = CREATEOBJECT("CacheManager", THIS.oConfig)
     ENDFUNC
 
     FUNCTION Get_04GeneralLedgerAccounts(tdStart AS Date, tdEnd AS Date) AS Boolean
         LOCAL lcCacheKey
         lcCacheKey = "GLA_" + DTOS(tdStart) + "_" + DTOS(tdEnd)
-        IF !ISNULL(THIS.oCache.Get(lcCacheKey))
+        IF THIS.oCache.Get(lcCacheKey, "crsGeneralLedgerAccounts")
             THIS.NotifyStatus("Repository: Plan de conturi preluat din cache...")
             RETURN .T.
         ENDIF
 
         THIS.NotifyStatus("Repository: Extragere plan de conturi...")
         Get_GLA()
-        THIS.oCache.Set(lcCacheKey, .T.)
+        THIS.oCache.Set(lcCacheKey, "crsGeneralLedgerAccounts")
         RETURN .T.
     ENDFUNC
 
     FUNCTION Get_05Customers(tdStart AS Date, tdEnd AS Date) AS Boolean
         LOCAL lcCacheKey
         lcCacheKey = "Customers_" + DTOS(tdStart) + "_" + DTOS(tdEnd)
-        IF !ISNULL(THIS.oCache.Get(lcCacheKey))
+        IF THIS.oCache.Get(lcCacheKey, "crsBalCustomers")
             THIS.NotifyStatus("Repository: Clienti preluati din cache...")
             RETURN .T.
         ENDIF
 
         THIS.NotifyStatus("Repository: Extragere clienti...")
         Get_Customers()
-        THIS.oCache.Set(lcCacheKey, .T.)
+        THIS.oCache.Set(lcCacheKey, "crsBalCustomers")
         RETURN .T.
     ENDFUNC
 
     FUNCTION Get_06Suppliers(tdStart AS Date, tdEnd AS Date) AS Boolean
         LOCAL lcCacheKey
         lcCacheKey = "Suppliers_" + DTOS(tdStart) + "_" + DTOS(tdEnd)
-        IF !ISNULL(THIS.oCache.Get(lcCacheKey))
+        IF THIS.oCache.Get(lcCacheKey, "crsBalSuppliers")
             THIS.NotifyStatus("Repository: Furnizori preluati din cache...")
             RETURN .T.
         ENDIF
 
         THIS.NotifyStatus("Repository: Extragere furnizori...")
         Get_Suppliers()
-        THIS.oCache.Set(lcCacheKey, .T.)
+        THIS.oCache.Set(lcCacheKey, "crsBalSuppliers")
         RETURN .T.
 	ENDFUNC
 
     FUNCTION Get_07TaxTable(tdStart AS Date, tdEnd AS Date) AS Boolean
         LOCAL lcCacheKey
         lcCacheKey = "TaxTable_" + DTOS(tdStart) + "_" + DTOS(tdEnd)
-        IF !ISNULL(THIS.oCache.Get(lcCacheKey))
+        IF THIS.oCache.Get(lcCacheKey, "MasterFiles_TaxTable")
             THIS.NotifyStatus("Repository: Tabela de taxe preluata din cache...")
             RETURN .T.
         ENDIF
 
         THIS.NotifyStatus("Repository: Extragere tipuri de taxa...")
         Get_TaxTable()
-        THIS.oCache.Set(lcCacheKey, .T.)
+        THIS.oCache.Set(lcCacheKey, "MasterFiles_TaxTable")
         RETURN .T.
 	ENDFUNC
 
@@ -2212,30 +2214,56 @@ ENDDEFINE
 
 *!*-----------------------------------------------------------------------------
 *!* CLASS: CacheManager
-*!* SCOP:  Implementeaza un mecanism simplu de caching in memorie.
+*!* SCOP:  Implementeaza un mecanism de caching pe disc, cu data de expirare.
 *!*-----------------------------------------------------------------------------
 DEFINE CLASS CacheManager AS Custom
-    oCache = NULL
+    cCachePath = "c:\icas\caching\"
+    nDefaultExpiration = 86400  && 24 de ore
 
-    FUNCTION Init
-        THIS.oCache = CREATEOBJECT("Collection")
+    FUNCTION Init(toConfig AS ConfigManager)
+        THIS.cCachePath = toConfig.GetValue("Paths", "CacheDirectory", "c:\icas\caching\")
+        THIS.nDefaultExpiration = VAL(toConfig.GetValue("Cache", "DefaultExpirationInSeconds", "86400"))
+
+        IF !DIRECTORY(THIS.cCachePath)
+            MD (THIS.cCachePath)
+        ENDIF
     ENDFUNC
 
-    FUNCTION Get(tcKey AS String)
-        IF THIS.oCache.Exists(tcKey)
-            RETURN THIS.oCache.Item(tcKey)
+    FUNCTION Get(tcKey AS String, tcCursorName AS String)
+        LOCAL lcCacheFile, lcMetaFile, ldCacheTime, lnExpiration
+        lcCacheFile = THIS.cCachePath + tcKey + ".dbf"
+        lcMetaFile = THIS.cCachePath + tcKey + ".meta"
+
+        IF FILE(lcCacheFile) AND FILE(lcMetaFile)
+            ldCacheTime = CTOT(FILETOSTR(lcMetaFile))
+            lnExpiration = THIS.nDefaultExpiration
+
+            IF DATETIME() - ldCacheTime < lnExpiration
+                *-- Cache-ul este valid, il folosim
+                USE (lcCacheFile) IN 0 ALIAS (tcCursorName)
+                RETURN .T.
+            ENDIF
         ENDIF
-        RETURN NULL
+
+        RETURN .F. && Cache-ul nu exista sau a expirat
     ENDFUNC
 
-    PROCEDURE Set(tcKey AS String, tvValue AS Variant)
-        IF THIS.oCache.Exists(tcKey)
-            THIS.oCache.Remove(tcKey)
+    PROCEDURE Set(tcKey AS String, tcCursorName AS String)
+        LOCAL lcCacheFile, lcMetaFile
+        lcCacheFile = THIS.cCachePath + tcKey + ".dbf"
+        lcMetaFile = THIS.cCachePath + tcKey + ".meta"
+
+        IF USED(tcCursorName)
+            SELECT (tcCursorName)
+            COPY TO (lcCacheFile)
+            STRTOFILE(TTOC(DATETIME()), lcMetaFile)
         ENDIF
-        THIS.oCache.Add(tvValue, tcKey)
     ENDPROC
 
     PROCEDURE Clear
-        THIS.oCache = CREATEOBJECT("Collection")
+        DELETE FILE (THIS.cCachePath + "*.dbf")
+        DELETE FILE (THIS.cCachePath + "*.cdx")
+        DELETE FILE (THIS.cCachePath + "*.fpt")
+        DELETE FILE (THIS.cCachePath + "*.meta")
     ENDPROC
 ENDDEFINE
