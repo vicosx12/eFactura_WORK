@@ -79,27 +79,66 @@ ENDDEFINE
 *!* Nici o alta clasa nu contine interogari SQL.
 *!*-----------------------------------------------------------------------------
 DEFINE CLASS SAFT_Repository AS Custom
+    oCache = NULL
+
+    FUNCTION Init
+        THIS.oCache = CREATEOBJECT("CacheManager")
+    ENDFUNC
 
     FUNCTION Get_04GeneralLedgerAccounts(tdStart AS Date, tdEnd AS Date) AS Boolean
+        LOCAL lcCacheKey
+        lcCacheKey = "GLA_" + DTOS(tdStart) + "_" + DTOS(tdEnd)
+        IF !ISNULL(THIS.oCache.Get(lcCacheKey))
+            THIS.NotifyStatus("Repository: Plan de conturi preluat din cache...")
+            RETURN .T.
+        ENDIF
+
         THIS.NotifyStatus("Repository: Extragere plan de conturi...")
         Get_GLA()
+        THIS.oCache.Set(lcCacheKey, .T.)
+        RETURN .T.
     ENDFUNC
 
     FUNCTION Get_05Customers(tdStart AS Date, tdEnd AS Date) AS Boolean
+        LOCAL lcCacheKey
+        lcCacheKey = "Customers_" + DTOS(tdStart) + "_" + DTOS(tdEnd)
+        IF !ISNULL(THIS.oCache.Get(lcCacheKey))
+            THIS.NotifyStatus("Repository: Clienti preluati din cache...")
+            RETURN .T.
+        ENDIF
+
         THIS.NotifyStatus("Repository: Extragere clienti...")
-        *-- Logica din `_05Customers()` pentru extragerea datelor
         Get_Customers()
+        THIS.oCache.Set(lcCacheKey, .T.)
+        RETURN .T.
     ENDFUNC
 
     FUNCTION Get_06Suppliers(tdStart AS Date, tdEnd AS Date) AS Boolean
+        LOCAL lcCacheKey
+        lcCacheKey = "Suppliers_" + DTOS(tdStart) + "_" + DTOS(tdEnd)
+        IF !ISNULL(THIS.oCache.Get(lcCacheKey))
+            THIS.NotifyStatus("Repository: Furnizori preluati din cache...")
+            RETURN .T.
+        ENDIF
+
         THIS.NotifyStatus("Repository: Extragere furnizori...")
         Get_Suppliers()
+        THIS.oCache.Set(lcCacheKey, .T.)
+        RETURN .T.
 	ENDFUNC
 
     FUNCTION Get_07TaxTable(tdStart AS Date, tdEnd AS Date) AS Boolean
+        LOCAL lcCacheKey
+        lcCacheKey = "TaxTable_" + DTOS(tdStart) + "_" + DTOS(tdEnd)
+        IF !ISNULL(THIS.oCache.Get(lcCacheKey))
+            THIS.NotifyStatus("Repository: Tabela de taxe preluata din cache...")
+            RETURN .T.
+        ENDIF
+
         THIS.NotifyStatus("Repository: Extragere tipuri de taxa...")
-        * Tb dupa _16GLE
         Get_TaxTable()
+        THIS.oCache.Set(lcCacheKey, .T.)
+        RETURN .T.
 	ENDFUNC
 
 
@@ -2117,5 +2156,86 @@ DEFINE CLASS SAFT_Summary_UI AS Form
 
     PROCEDURE cmdClose.Click
         THISFORM.Release()
+    ENDPROC
+ENDDEFINE
+
+*!*-----------------------------------------------------------------------------
+*!* CLASS: ConfigManager
+*!* SCOP:  Citeste si ofera acces la setarile din fisierul config.ini.
+*!*-----------------------------------------------------------------------------
+DEFINE CLASS ConfigManager AS Custom
+    ConfigFile = "config.ini"
+    oConfig = NULL
+
+    FUNCTION Init
+        THIS.LoadConfig()
+    ENDFUNC
+
+    PROCEDURE LoadConfig
+        IF FILE(THIS.ConfigFile)
+            THIS.oConfig = CREATEOBJECT("Collection")
+            LOCAL lcSection, lcKey, lcValue
+            lcSection = ""
+            FOR EACH lcLine IN FILETOSTR(THIS.ConfigFile)
+                lcLine = ALLTRIM(lcLine)
+                IF !EMPTY(lcLine) AND !INLIST(LEFT(lcLine, 1), ';', '#')
+                    IF LEFT(lcLine, 1) == '[' AND RIGHT(lcLine, 1) == ']'
+                        lcSection = STRTRAN(STRTRAN(lcLine, '[', ''), ']', '')
+                        IF !THIS.oConfig.Exists(lcSection)
+                            THIS.oConfig.Add(CREATEOBJECT("Collection"), lcSection)
+                        ENDIF
+                    ELSE
+                        IF !EMPTY(lcSection)
+                            LOCAL lnPos
+                            lnPos = AT('=', lcLine)
+                            IF lnPos > 0
+                                lcKey = ALLTRIM(SUBSTR(lcLine, 1, lnPos - 1))
+                                lcValue = ALLTRIM(SUBSTR(lcLine, lnPos + 1))
+                                THIS.oConfig.Item(lcSection).Add(lcValue, lcKey)
+                            ENDIF
+                        ENDIF
+                    ENDIF
+                ENDIF
+            ENDFOR
+        ELSE
+            ERROR "Fisierul de configurare " + THIS.ConfigFile + " nu a fost gasit."
+        ENDIF
+    ENDPROC
+
+    FUNCTION GetValue(tcSection AS String, tcKey AS String, tvDefault AS Variant)
+        IF VARTYPE(THIS.oConfig) == "O" AND THIS.oConfig.Exists(tcSection) AND THIS.oConfig.Item(tcSection).Exists(tcKey)
+            RETURN THIS.oConfig.Item(tcSection).Item(tcKey)
+        ENDIF
+        RETURN tvDefault
+    ENDFUNC
+ENDDEFINE
+
+*!*-----------------------------------------------------------------------------
+*!* CLASS: CacheManager
+*!* SCOP:  Implementeaza un mecanism simplu de caching in memorie.
+*!*-----------------------------------------------------------------------------
+DEFINE CLASS CacheManager AS Custom
+    oCache = NULL
+
+    FUNCTION Init
+        THIS.oCache = CREATEOBJECT("Collection")
+    ENDFUNC
+
+    FUNCTION Get(tcKey AS String)
+        IF THIS.oCache.Exists(tcKey)
+            RETURN THIS.oCache.Item(tcKey)
+        ENDIF
+        RETURN NULL
+    ENDFUNC
+
+    PROCEDURE Set(tcKey AS String, tvValue AS Variant)
+        IF THIS.oCache.Exists(tcKey)
+            THIS.oCache.Remove(tcKey)
+        ENDIF
+        THIS.oCache.Add(tvValue, tcKey)
+    ENDPROC
+
+    PROCEDURE Clear
+        THIS.oCache = CREATEOBJECT("Collection")
     ENDPROC
 ENDDEFINE

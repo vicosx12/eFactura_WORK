@@ -95,6 +95,89 @@ DEFINE CLASS TaxCodeResolver AS Custom
         RETURN ''
     ENDFUNC
 
+    FUNCTION Get_GeneralLedgerEntries(toContext AS SAFT_Context)
+        LOCAL lcSQL
+        TEXT TO lcSQL NOSHOW TEXTMERGE
+            SELECT
+                r.Fel_D AS JournalId,
+                'Registru jurnal' AS Description,
+                r.Fel_D AS Type,
+                RTRIM(CAST(r.Id AS C(10))) + ' - ' + RTRIM(r.Fel_D) + ' - ' + RTRIM(CAST(r.Id_Nota AS C(10))) AS TransactionId,
+                MONTH(r.Data) AS Period,
+                YEAR(r.Data) AS PeriodYear,
+                r.Data AS TransactionDate,
+                ISNULL(r.Explicatie, '') AS TransactionDescription,
+                r.Data AS SystemEntryDate,
+                r.Data AS GLPostingDate,
+                r.Data AS DataDocReala,
+                ISNULL(r.NDP, '') AS NDP,
+                r.ContD,
+                r.ContC,
+                r.Suma,
+                ISNULL(r.Cod_Valuta, 'RON') AS Cod_Valuta,
+                ISNULL(r.Curs, 0.0000) AS Curs,
+                ISNULL(r.Suma_Val, 0) AS Suma_Val,
+                CAST('' AS C(15)) AS Cod_Fiscal,
+                SPACE(2) AS Tara,
+                SPACE(1) AS Tip_Tert,
+                CAST(0 AS B) AS Vies,
+                CAST(0 AS B) AS StatusTvaIncasare,
+                SPACE(1) AS TipFactura,
+                r.IdTva,
+                SPACE(5) AS CodTva,
+                SPACE(254) AS DenumireTva,
+                SPACE(254) AS TaxBaseDescription,
+                CAST(0 AS N(2)) AS ProcTva,
+                SPACE(20) AS CeCont,
+                SPACE(3) AS TaxDCA,
+                SPACE(3) AS TaxType,
+                SPACE(6) AS TaxCode,
+                CAST(0 AS N(14,2)) AS TaxBase,
+                CAST(0 AS N(14,2)) AS TaxAmount,
+                SPACE(5) AS TipTva,
+                r.IdTva AS IdTva_9,
+                SPACE(5) AS CodTva_9,
+                SPACE(254) AS DenumireTva_9,
+                SPACE(254) AS TaxBaseDescription_9,
+                CAST(0 AS N(2)) AS ProcTva_9,
+                SPACE(20) AS CeCont_9,
+                SPACE(3) AS TaxDCA_9,
+                SPACE(3) AS TaxType_9,
+                SPACE(6) AS TaxCode_9,
+                CAST(0 AS N(14,2)) AS TaxBase_9,
+                CAST(0 AS N(14,2)) AS TaxAmount_9,
+                SPACE(5) AS TipTva_9,
+                r.IdTva AS IdTva_5,
+                SPACE(5) AS CodTva_5,
+                SPACE(254) AS DenumireTva_5,
+                SPACE(254) AS TaxBaseDescription_5,
+                CAST(0 AS N(2)) AS ProcTva_5,
+                SPACE(20) AS CeCont_5,
+                SPACE(3) AS TaxDCA_5,
+                SPACE(3) AS TaxType_5,
+                SPACE(6) AS TaxCode_5,
+                CAST(0 AS N(14,2)) AS TaxBase_5,
+                CAST(0 AS N(14,2)) AS TaxAmount_5,
+                SPACE(5) AS TipTva_5,
+                r.IdCategorie,
+                r.Categorie,
+                r.PlanB,
+                r.CapitolB,
+                r.ArticolB,
+                SPACE(4) AS Tip_Ded,
+                CAST(0 AS B) AS IsTvaIncasare,
+                r.ID AS Tranzactia,
+                r.ID_Nota,
+                CAST(0 AS I) AS IdFactura
+            FROM Registru r
+            WHERE r.Data BETWEEN ?toContext.StartDate AND ?toContext.EndDate
+              AND ISNULL(r.Sters, 0) = 0
+              AND ISNULL(ContD, '') <> ''
+              AND ISNULL(ContC, '') <> ''
+        ENDTEXT
+        mySQLExec(lcSQL, "cGeneralLedgerEntries")
+    ENDFUNC
+
     PROTECTED FUNCTION GetPurchaseTaxCodeForStandardRate(tcTip_Tert, tcTipFactura, tcCont, tdDataDocReala, tdData1, llSameDayPay)
         DO CASE
             CASE tcTip_Tert == '1' AND tcTipFactura == 'T'

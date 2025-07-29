@@ -63,14 +63,17 @@ TRY
     *-- Notifica observatorii ca procesul începe (Logger-ul va scrie în fisier)
     loContext.Notify("PROCESS_START", "Initiere generare SAF-T...")
 
+	loConfig = CREATEOBJECT("ConfigManager")
+    loContext.Notify("ENVIRONMENT", "ConfigManager initializat.")
+
     lcLogFile			= loContext.LogFile
     lcTipDeclaratie		= loContext.DeclarationType
     CUI_Raportor		= '00'+ICAS.oSoc.CodFiscal
     vTipConta			= IIF(IsNullOrEmpty(ALLTRIM(ICAS.oSoc.SaFT_TipConta)), 'A', ALLTRIM(ICAS.oSoc.SaFT_TipConta))
-    lcDirectorSAFT		= AddBs(JustPath(loContext.FinalFileName))
+    lcDirectorSAFT		= loConfig.GetValue("Paths", "OutputDirectory", "Declaratii")
     Data1				= loContext.StartDate
     Data2				= loContext.EndDate
-    lnCalupInregGLE		= 50000
+    lnCalupInregGLE		= VAL(loConfig.GetValue("SAFT", "GLE_ChunkSize", "50000"))
 
 	lcModPlataTva=GetModPlataTva(tdData2)
 	gcTaxType='000'
