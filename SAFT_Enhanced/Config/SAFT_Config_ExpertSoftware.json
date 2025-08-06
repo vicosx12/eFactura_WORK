@@ -1,0 +1,115 @@
+{
+  "Database": {
+    "QueryTimeout": 60,
+    "ConnectionString": "Driver=SQL Server Native Client 11.0;Database=ExpertSoftwareCompany;Server=localhost\\ICAS_2019;UID=sa;PWD=016049",
+    "BatchSize": 25000,
+    "MaxRetries": 5,
+    "DatabaseType": "SQL_SERVER",
+    "CommandTimeout": 300,
+    "ConnectionPoolSize": 10
+  },
+  "SAFT": {
+    "DeclarationType": "L",
+    "TaxType": "300",
+    "AccountType": "A",
+    "Version": "1.04_01",
+    "EnableValidation": true,
+    "OutputPath": "C:\\ICAS\\Declaratii\\D406\\AI\\Ianuarie2025\\expert_software_company_srl\\",
+    "TempPath": "C:\\ICAS\\TMP\\D406\\",
+    "ArchivePath": "C:\\ICAS\\Declaratii\\D406\\Archive\\",
+    "FileNamePrefix": "SAFT_RO14916343",
+    "CompressOutput": true,
+    "GenerateChecksum": true
+  },
+  "Performance": {
+    "EnableMonitoring": true,
+    "EnableMetrics": true,
+    "DetailedLogging": true,
+    "MaxConcurrentTasks": 4,
+    "MemoryThresholdMB": 2048,
+    "AutoOptimizeBatchSize": true,
+    "EnableAsyncProcessing": true,
+    "ProfilerEnabled": true
+  },
+  "Company": {
+    "CUI": "RO14916343",
+    "Name": "Expert Software Company SRL",
+    "Address": "str.Argesului nr.15 municipiul Oltenita, judetul Calarasi cod postal 915400",
+    "TaxRegistrationNumber": "RO14916343",
+    "ContactEmail": "",
+    "ContactPhone": "",
+    "LegalForm": "SRL",
+    "FiscalYear": 2025,
+    "Currency": "RON"
+  },
+  "Process": {
+    "StartDate": "",
+    "EndDate": "",
+    "EnableProgressNotifications": true,
+    "AutoCleanupTemp": true,
+    "BackupBeforeProcess": true,
+    "MaxProcessingTimeHours": 24,
+    "EnableRecovery": true,
+    "CheckpointInterval": 10000,
+    "EstimatedRecordsPerMonth": 100000
+  },
+  "Validation": {
+    "StrictMode": true,
+    "ValidateXML": true,
+    "ValidateBusinessRules": true,
+    "MaxErrorsBeforeStop": 50,
+    "ValidateBalances": true,
+    "ValidateDates": true,
+    "ValidateTaxCodes": true,
+    "GenerateValidationReport": true
+  },
+  "Logging": {
+    "LogLevel": "DEBUG",
+    "LogToFile": true,
+    "LogToConsole": true,
+    "LogPath": "C:\\ICAS\\D406\\Log\\",
+    "MaxLogFileSize": 52428800,
+    "MaxLogFiles": 10,
+    "LogRotation": true,
+    "LogPerformanceMetrics": true,
+    "LogSQLQueries": false,
+    "LogDetailedErrors": true
+  },
+  "Security": {
+    "EncryptSensitiveData": true,
+    "ValidateFileIntegrity": true,
+    "RequireDigitalSignature": false,
+    "AuditTrail": true,
+    "SecureTemporaryFiles": true
+  },
+  "Optimization": {
+    "EnableParallelProcessing": true,
+    "UseMemoryCache": true,
+    "CacheSizeLimit": 1073741824,
+    "OptimizeQueries": true,
+    "PreloadLookupTables": true,
+    "UseIndexHints": true,
+    "EnableCompression": true
+  },
+  "Notifications": {
+    "EmailNotifications": false,
+    "EmailSMTPServer": "",
+    "EmailPort": 587,
+    "EmailUsername": "",
+    "EmailPassword": "",
+    "NotifyOnStart": false,
+    "NotifyOnComplete": false,
+    "NotifyOnError": true,
+    "NotificationRecipients": []
+  },
+  "Regional": {
+    "Locale": "ro_RO",
+    "DateFormat": "dd.MM.yyyy",
+    "NumberFormat": "###.##0,00",
+    "CurrencySymbol": "RON",
+    "TimeZone": "Europe/Bucharest",
+    "FiscalYearStart": "01.01",
+    "DecimalSeparator": ",",
+    "ThousandsSeparator": "."
+  }
+}

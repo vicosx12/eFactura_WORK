@@ -1,0 +1,48 @@
+{
+  "Database": {
+    "QueryTimeout": 30,
+    "ConnectionString": "",
+    "BatchSize": 50000,
+    "MaxRetries": 3
+  },
+  "SAFT": {
+    "DeclarationType": "L",
+    "TaxType": "300",
+    "AccountType": "A",
+    "Version": "1.04_01",
+    "EnableValidation": true,
+    "OutputPath": "SAFT_Output/",
+    "TempPath": "SAFT_Temp/"
+  },
+  "Performance": {
+    "EnableMonitoring": true,
+    "EnableMetrics": true,
+    "DetailedLogging": false,
+    "MaxConcurrentTasks": 3
+  },
+  "Company": {
+    "CUI": "",
+    "Name": "",
+    "Address": "",
+    "TaxRegistrationNumber": ""
+  },
+  "Process": {
+    "StartDate": "",
+    "EndDate": "",
+    "EnableProgressNotifications": true,
+    "AutoCleanupTemp": true
+  },
+  "Validation": {
+    "StrictMode": true,
+    "ValidateXML": true,
+    "ValidateBusinessRules": true,
+    "MaxErrorsBeforeStop": 100
+  },
+  "Logging": {
+    "LogLevel": "INFO",
+    "LogToFile": true,
+    "LogToConsole": true,
+    "LogPath": "SAFT_Logs/",
+    "MaxLogFileSize": 10485760
+  }
+}
