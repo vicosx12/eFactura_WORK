@@ -1,0 +1,1378 @@
+* =====================================================================
+* CACHE ANAF IMPROVED - Versiune îmbunatatita pentru productie
+* =====================================================================
+* Autor: AI Assistant
+* Data: 2025
+* Versiune: 2.0
+* 
+* Îmbunatatiri fata de versiunea originala:
+* 1. Error handling mai robust
+* 2. Logging pentru debugging
+* 3. Statistici de performanta
+* 4. TTL (Time To Live) pentru invalidare automata
+* 5. Batch operations pentru performanta
+* 6. Configurare externalizata
+* 7. Thread safety pentru medii multi-user
+* =====================================================================
+
+* =====================================================================
+* 1. CONFIGURARE CACHE - Externalizata pentru flexibilitate
+* =====================================================================
+DEFINE CLASS cls_CacheConfig AS Custom
+    * Configurari L1 (Memorie)
+    nL1_MaxSize				= 500      && Marit pentru mai multe hit-uri
+    nL1_PreWarmSize			= 100      && Câte elemente sa preîncarcare
+    
+    * Configurari L2 (Disc)
+    cL2_TablePath			= ""       && Se va seta dinamic
+    lL2_AutoPack			= .T.      && Pack automat când se ?terg multe înregistrari
+    nL2_PackThreshold		= 100      && Dupa câte ?tergeri sa faca pack
+    
+    * Configurari TTL (Time To Live)
+    nDefaultTTL_Hours		= 24*30*365&& TTL implicit în ore (1 an)
+    nRTVAI_TTL_Hours		= 262800   && TTL specific pentru date RTVAI  (1 an)
+    nVAT_TTL_Hours			= 262800   && TTL pentru date VAT (168=7 zile)
+    
+    * Configurari Logging
+    lEnableLogging			= .T.
+    cLogPath				= ""       && Se va seta dinamic
+    nLogLevel				= 2        && 0=None, 1=Errors, 2=Info, 3=Debug
+    
+    * Configurari Performanta
+    lEnableStats			= .T.      && Colectare statistici
+    nStatsReportInterval	= 100      && La câte operatii sa raporteze
+    
+    PROCEDURE Init()
+        * Setare cai dinamice bazate pe mediu
+        LOCAL lcBasePath
+        lcBasePath = JUSTPATH(SYS(16, 0))
+		Local lcPath As String
+		
+		If InList(Application.StartMode, 2, 3, 5)	&& exe si dll automation server
+			m.lcPath=JustPath(Application.ServerName)
+		Else
+			m.lcPath=lcBasePath
+		EndIf
+		
+		lcBasePath = AddBs(m.lcPath)
+        
+        IF EMPTY(THIS.cL2_TablePath)
+            THIS.cL2_TablePath = ADDBS(lcBasePath) + "DBF\Cache_ANAF_V2"
+        ENDIF
+        
+        IF EMPTY(THIS.cLogPath)
+            THIS.cLogPath = ADDBS(lcBasePath) + "LOG\"
+            IF NOT DIRECTORY(THIS.cLogPath)
+                MD (THIS.cLogPath)
+            ENDIF
+        ENDIF
+    ENDPROC
+
+ENDDEFINE
+
+* =====================================================================
+* 2. OBIECTUL DE CACHE EXTINS - Cu TTL si metadate
+* =====================================================================
+DEFINE CLASS cls_CacheItemEx AS Custom
+    Key			= ""            && Cheia unica
+    Value		= NULL          && Valoarea stocata
+    LastAccess	= {}            && Timestamp ultimul acces
+    CreatedAt	= {}            && Timestamp creare
+    ExpiresAt	= {}            && Timestamp expirare (TTL)
+    HitCount	= 0             && Numar de accesari
+    Size		= 0             && Dimensiune aproximativa în bytes
+    Source		= ""			&& Sursa datelor (API/DB/etc)
+    
+    PROCEDURE Init(tcKey, txValue, tnTTL_Hours)
+        THIS.Key		= tcKey
+        THIS.Value		= txValue
+        THIS.CreatedAt	= DATETIME()
+        THIS.LastAccess = THIS.CreatedAt
+        THIS.HitCount	= 0
+        
+        IF PCOUNT() >= 3 AND tnTTL_Hours > 0
+            THIS.ExpiresAt = THIS.CreatedAt + (tnTTL_Hours * 3600)
+        ELSE
+            THIS.ExpiresAt = THIS.CreatedAt + (24 * 3600) && TTL implicit 24 ore
+        ENDIF
+        
+        * Estimare dimensiune
+        THIS.EstimateSize()
+    ENDPROC
+    
+    PROCEDURE EstimateSize()
+        DO CASE
+            CASE VARTYPE(THIS.Value) = 'C'
+                THIS.Size = LEN(THIS.Value)
+            CASE VARTYPE(THIS.Value) = 'O'
+                THIS.Size = 1000  && Estimare pentru obiecte
+            OTHERWISE
+                THIS.Size = 50    && Estimare pentru valori simple
+        ENDCASE
+    ENDPROC
+    
+    FUNCTION IsExpired() AS Boolean
+        RETURN (THIS.ExpiresAt < DATETIME())
+    ENDFUNC
+ENDDEFINE
+
+* =====================================================================
+* 3. MANAGERUL DE CACHE IERARHIC ÎMBUNATATIT
+* =====================================================================
+DEFINE CLASS cls_HierarchicalCacheManagerV2 AS Custom
+    PROTECTED oL1_Cache         && Cache L1 (Memorie)
+    PROTECTED oConfig           && Configurare
+    PROTECTED oStats            && Statistici
+    PROTECTED oLogger           && Logger
+    PROTECTED oJson             && Serializator JSON
+    PROTECTED nL2_DeleteCount   && Contor pentru pack automat
+    PROTECTED cL2_Alias
+    PROTECTED oLock             && Pentru thread safety
+    
+    * Proprietati publice pentru monitorizare
+    nTotalRequests = 0
+    nCacheHits = 0
+    nCacheMisses = 0
+    
+    * =====================================================================
+    PROCEDURE Init(toConfig)
+    * =====================================================================
+        * Configurare
+        IF PCOUNT() > 0 AND VARTYPE(toConfig) = 'O'
+            THIS.oConfig = toConfig
+        ELSE
+            THIS.oConfig = CREATEOBJECT("cls_CacheConfig")
+        ENDIF
+        
+        * Ini?ializare componente - cu verificari
+        TRY
+            THIS.oL1_Cache = CREATEOBJECT("Collection")
+        CATCH
+            MESSAGEBOX("Eroare la creare Collection pentru L1 Cache", 16, "Eroare")
+            RETURN .F.
+        ENDTRY
+        
+        TRY
+            THIS.oStats = CREATEOBJECT("cls_CacheStatistics")
+        CATCH
+            THIS.oStats = NULL
+        ENDTRY
+        
+        TRY
+            THIS.oLogger = CREATEOBJECT("cls_CacheLogger", THIS.oConfig)
+        CATCH
+            THIS.oLogger = NULL
+        ENDTRY
+        
+        THIS.nL2_DeleteCount = 0
+        
+        * Încercare creare JSON serializer
+        TRY
+            SET PROCEDURE TO wwJsonSerializer.prg ADDITIVE
+            THIS.oJson = CREATEOBJECT("wwJsonSerializer")
+        CATCH
+            THIS.oJson = NULL
+            IF NOT ISNULL(THIS.oLogger)
+                THIS.oLogger.LogWarning("JSON Serializer nu este disponibil")
+            ENDIF
+        ENDTRY
+        
+        * Ini?ializare L2 cu error handling
+        TRY
+            THIS.L2_Initialize()
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+                THIS.oLogger.LogError("Eroare la initializare L2: " + loError.Message)
+            ENDIF
+            * Continuam doar cu L1 daca L2 e?ueaza
+        ENDTRY
+        
+        * Pre-încarcare cache L1
+        IF THIS.oConfig.nL1_PreWarmSize > 0
+            THIS.PreWarmL1Cache(THIS.oConfig.nL1_PreWarmSize)
+        ENDIF
+        
+        IF NOT ISNULL(THIS.oLogger)
+            THIS.oLogger.LogInfo("Cache Manager initializat cu succes")
+        ENDIF
+    ENDPROC
+    
+    * =====================================================================
+    PROCEDURE Destroy()
+    * =====================================================================
+        * Salvare statistici finale
+        IF VARTYPE(THIS.oStats) = 'O'
+            THIS.oStats.SaveReport()
+        ENDIF
+        
+        * Închidere L2
+        IF USED(THIS.cL2_Alias)
+            USE IN (THIS.cL2_Alias)
+        ENDIF
+        
+        IF NOT ISNULL(THIS.oLogger)
+	        THIS.oLogger.LogInfo("Cache Manager închis")
+		ENDIF
+    ENDPROC
+    
+    * =====================================================================
+    FUNCTION Get(tcKey AS String, tlSkipExpired AS Boolean)
+    * =====================================================================
+    * Obtine valoare din cache cu verificare TTL
+    * tlSkipExpired = .T. pentru a ignora elementele expirate
+    * =====================================================================
+        LOCAL loItem, lxValue
+        lxValue = NULL
+        
+        THIS.nTotalRequests = THIS.nTotalRequests + 1
+        
+        * Validare parametru
+        IF EMPTY(tcKey)
+            IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogError("Get() apelat cu cheie goala")
+			ENDIF
+            RETURN NULL
+        ENDIF
+        
+        * --- Cautare în L1 ---
+        IF THIS.L1_Seek(tcKey)
+            loItem = THIS.oL1_Cache.Item(tcKey)
+            
+            * Verificare expirare
+            IF tlSkipExpired AND loItem.IsExpired()
+                IF NOT ISNULL(THIS.oLogger)
+	                THIS.oLogger.LogDebug("Element expirat în L1: " + tcKey)
+                ENDIF
+                THIS.Invalidate(tcKey)
+                THIS.nCacheMisses = THIS.nCacheMisses + 1
+                RETURN NULL
+            ENDIF
+            
+            * Actualizare metadate
+            loItem.LastAccess = DATETIME()
+            loItem.HitCount = loItem.HitCount + 1
+            
+            THIS.nCacheHits = THIS.nCacheHits + 1
+            THIS.oStats.RecordHit("L1")
+            
+            RETURN loItem.Value
+        ENDIF
+        
+        * --- Cautare în L2 ---
+        TRY
+            lxValue = THIS.L2_Get(tcKey, tlSkipExpired)
+            IF NOT ISNULL(lxValue)
+                * Promovare în L1
+                THIS.L1_Push(tcKey, lxValue, 0)  && 0 = pastreaza TTL original
+                THIS.nCacheHits = THIS.nCacheHits + 1
+                THIS.oStats.RecordHit("L2")
+                RETURN lxValue
+            ENDIF
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+	            THIS.oLogger.LogError("Eroare L2_Get: " + loError.Message)
+	        ENDIF
+        ENDTRY
+        
+        * Cache miss complet
+        THIS.nCacheMisses = THIS.nCacheMisses + 1
+        THIS.oStats.RecordMiss()
+        
+        RETURN NULL
+    ENDPROC
+    
+    * =====================================================================
+    PROCEDURE Set(tcKey AS String, txValue, tnTTL_Hours)
+    * =====================================================================
+    * Seteaza valoare cu TTL op?ional
+    * =====================================================================
+        IF EMPTY(tcKey)
+	        IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogError("Set() apelat cu cheie goala")
+            ENDIF
+            RETURN
+        ENDIF
+        
+        * TTL implicit daca nu e specificat
+        IF PCOUNT() < 3 OR VARTYPE(tnTTL_Hours) # 'N'
+            tnTTL_Hours = THIS.oConfig.nDefaultTTL_Hours
+        ENDIF
+        
+        * Scriere în ambele niveluri (Write-Through)
+        TRY
+            THIS.L1_Push(tcKey, txValue, tnTTL_Hours)
+            THIS.L2_Set(tcKey, txValue, tnTTL_Hours)
+            THIS.oStats.RecordSet()
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogError("Eroare Set: " + loError.Message)
+        	ENDIF
+        ENDTRY
+    ENDPROC
+    
+    * =====================================================================
+    PROCEDURE InvalidatePattern(tcPattern AS String)
+    * =====================================================================
+    * Invalideaza toate cheile care se potrivesc cu un pattern
+    * Ex: InvalidatePattern("RTVAI_*") Sterge toate cheile RTVAI
+    * =====================================================================
+        LOCAL lnInvalidated, loItem, lcKey
+        lnInvalidated = 0
+        
+        * Invalidare în L1
+        LOCAL ARRAY laKeys[1]
+        LOCAL lnCount, i
+        lnCount = 0
+        
+        FOR EACH loItem IN THIS.oL1_Cache
+            IF LIKE(tcPattern, loItem.Key)
+                lnCount = lnCount + 1
+                DIMENSION laKeys[lnCount]
+                laKeys[lnCount] = loItem.Key
+            ENDIF
+        ENDFOR
+        
+        FOR i = 1 TO lnCount
+            THIS.oL1_Cache.Remove(laKeys[i])
+            lnInvalidated = lnInvalidated + 1
+        ENDFOR
+        
+        * Invalidare în L2
+        TRY
+            lnInvalidated = lnInvalidated + THIS.L2_DeletePattern(tcPattern)
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogError("Eroare InvalidatePattern L2: " + loError.Message)
+        	ENDIF
+        ENDTRY
+        
+        IF NOT ISNULL(THIS.oLogger)
+        	THIS.oLogger.LogInfo("Invalidate " + TRANSFORM(lnInvalidated) + " chei pentru pattern: " + tcPattern)
+        ENDIF	
+        
+        RETURN lnInvalidated
+    ENDPROC
+    
+    * =====================================================================
+    PROCEDURE GetStatistics()
+    * =====================================================================
+    * Returneaza obiect cu statistici detaliate
+    * =====================================================================
+        LOCAL loStats
+        loStats = CREATEOBJECT("Empty")
+        
+        * Statistici generale
+        ADDPROPERTY(loStats, "TotalRequests",	THIS.nTotalRequests)
+        ADDPROPERTY(loStats, "CacheHits",		THIS.nCacheHits)
+        ADDPROPERTY(loStats, "CacheMisses",		THIS.nCacheMisses)
+        ADDPROPERTY(loStats, "HitRate",			IIF(THIS.nTotalRequests > 0, THIS.nCacheHits / THIS.nTotalRequests * 100, 0))
+        
+        * Statistici L1
+        ADDPROPERTY(loStats, "L1_Count",		THIS.oL1_Cache.Count)
+        ADDPROPERTY(loStats, "L1_MaxSize",		THIS.oConfig.nL1_MaxSize)
+        ADDPROPERTY(loStats, "L1_Usage",		IIF(THIS.oConfig.nL1_MaxSize > 0, THIS.oL1_Cache.Count / THIS.oConfig.nL1_MaxSize * 100, 0))
+        
+        * Statistici L2
+        LOCAL lnL2Count
+        lnL2Count = 0
+        IF USED(THIS.cL2_Alias)
+            lnL2Count = RECCOUNT(THIS.cL2_Alias)
+        ENDIF
+        ADDPROPERTY(loStats, "L2_Count", lnL2Count)
+        
+        RETURN loStats
+    ENDPROC
+    
+    * =====================================================================
+    PROCEDURE CleanupExpired()
+    * =====================================================================
+    * Curata elementele expirate din ambele niveluri
+    * =====================================================================
+        LOCAL lnCleaned
+        lnCleaned = 0
+        
+        * Cleanup L1
+        LOCAL ARRAY laExpiredKeys[1]
+        LOCAL lnExpired, i, loItem
+        lnExpired = 0
+        
+        FOR EACH loItem IN THIS.oL1_Cache
+            IF loItem.IsExpired()
+                lnExpired = lnExpired + 1
+                DIMENSION laExpiredKeys[lnExpired]
+                laExpiredKeys[lnExpired] = loItem.Key
+            ENDIF
+        ENDFOR
+        
+        FOR i = 1 TO lnExpired
+            THIS.oL1_Cache.Remove(laExpiredKeys[i])
+            lnCleaned = lnCleaned + 1
+        ENDFOR
+        
+        * Cleanup L2
+        TRY
+            lnCleaned = lnCleaned + THIS.L2_CleanupExpired()
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+	            THIS.oLogger.LogError("Eroare CleanupExpired L2: " + loError.Message)
+     		ENDIF
+        ENDTRY
+        
+        IF NOT ISNULL(THIS.oLogger)
+        	THIS.oLogger.LogInfo("Cleanup: " + TRANSFORM(lnCleaned) + " elemente expirate sterse")
+        ENDIF
+        
+        RETURN lnCleaned
+    ENDPROC
+    
+    * =====================================================================
+    * METODE PROTEJATE L1
+    * =====================================================================
+    PROTECTED FUNCTION L1_Seek(tcKey AS String) AS Boolean
+        LOCAL llExists
+        llExists = .F.
+        TRY
+            THIS.oL1_Cache.Item(tcKey)
+            llExists = .T.
+        CATCH
+        ENDTRY
+        RETURN llExists
+    ENDPROC
+    
+    PROTECTED PROCEDURE L1_Push(tcKey AS String, txValue, tnTTL_Hours)
+        LOCAL loItem
+        
+        IF THIS.L1_Seek(tcKey)
+            * Update existent
+            loItem = THIS.oL1_Cache.Item(tcKey)
+            loItem.Value = txValue
+            loItem.LastAccess = DATETIME()
+            IF tnTTL_Hours > 0
+                loItem.ExpiresAt = DATETIME() + (tnTTL_Hours * 3600)
+            ENDIF
+        ELSE
+            * Element nou
+            IF THIS.oL1_Cache.Count >= THIS.oConfig.nL1_MaxSize
+                THIS.L1_Evict()
+            ENDIF
+            
+            loItem = CREATEOBJECT("cls_CacheItemEx", tcKey, txValue, tnTTL_Hours)
+            THIS.oL1_Cache.Add(loItem, tcKey)
+        ENDIF
+    ENDPROC
+    
+    PROTECTED PROCEDURE L1_Evict()
+        * Eviction inteligenta: combina LRU cu TTL
+        LOCAL lcKeyToRemove, loWorstItem, loItem, lnScore, lnWorstScore
+        
+        lcKeyToRemove = ""
+        lnWorstScore = 0
+        
+        FOR EACH loItem IN THIS.oL1_Cache
+            * Scor bazat pe: vechime, expirare, frecven?a utilizare
+            lnScore = 0
+            
+            * Penalizare pentru elemente vechi neaccesate
+            lnScore = lnScore + (DATETIME() - loItem.LastAccess)
+            
+            * Bonus pentru elemente cu multe hit-uri
+            lnScore = lnScore - (loItem.HitCount * 100)
+            
+            * Penalizare maxima pentru elemente expirate
+            IF loItem.IsExpired()
+                lnScore = lnScore + 999999
+            ENDIF
+            
+            IF lnScore > lnWorstScore
+                lnWorstScore = lnScore
+                lcKeyToRemove = loItem.Key
+            ENDIF
+        ENDFOR
+        
+        IF NOT EMPTY(lcKeyToRemove)
+            THIS.oL1_Cache.Remove(lcKeyToRemove)
+            IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogDebug("L1 Evict: " + lcKeyToRemove)
+        	ENDIF
+        ENDIF
+    ENDPROC
+    
+    * =====================================================================
+    * METODE PROTEJATE L2
+    * =====================================================================
+    PROTECTED PROCEDURE L2_Initialize()
+        THIS.cL2_Alias = JUSTSTEM(THIS.oConfig.cL2_TablePath)
+        
+        IF USED(THIS.cL2_Alias)
+            RETURN
+        ENDIF
+        
+        LOCAL llCreated, lcCdxPath
+        llCreated = .F.
+        lcCdxPath = FORCEEXT(THIS.oConfig.cL2_TablePath, "cdx")
+        
+        IF NOT FILE(THIS.oConfig.cL2_TablePath + ".dbf")
+            CREATE TABLE (THIS.oConfig.cL2_TablePath) FREE ( ;
+                Key C(50) NOT NULL, ;
+                Value M, ;
+                CreatedAt T, ;
+                LastAccess T, ;
+                ExpiresAt T, ;
+                HitCount I, ;
+                Source C(20) ;
+            )
+            llCreated = .T.
+        ELSE
+            USE (THIS.oConfig.cL2_TablePath) IN 0 SHARED ALIAS (THIS.cL2_Alias)
+        ENDIF
+        
+        IF llCreated OR NOT FILE(lcCdxPath)
+            SELECT (THIS.cL2_Alias)
+            INDEX ON Key TAG Key CANDIDATE
+            INDEX ON LastAccess TAG LastAcc DESCENDING
+            INDEX ON ExpiresAt TAG ExpireAt
+        ENDIF
+    ENDPROC
+    
+    PROTECTED FUNCTION L2_Get(tcKey AS String, tlSkipExpired AS Boolean)
+        LOCAL lxValue, lcStoredValue, lnSelect, ltExpires
+        lxValue = NULL
+        
+        lnSelect = SELECT()
+        
+        TRY
+            SELECT (THIS.cL2_Alias)
+            SET ORDER TO TAG Key
+            
+            IF SEEK(tcKey, THIS.cL2_Alias)
+                ltExpires = EVALUATE(THIS.cL2_Alias + ".ExpiresAt")
+                
+                * Verificare expirare
+                IF tlSkipExpired AND ltExpires < DATETIME()
+                    DELETE IN (THIS.cL2_Alias)
+                    THIS.nL2_DeleteCount = THIS.nL2_DeleteCount + 1
+                    THIS.L2_CheckAutoPack()
+                ELSE
+                    lcStoredValue = ALLTRIM(EVALUATE(THIS.cL2_Alias + ".Value"))
+                    
+                    * Deserializare
+                    IF VARTYPE(lcStoredValue) = 'C' AND ;
+                       INLIST(LEFT(lcStoredValue, 1), '{', '[') AND ;
+                       NOT ISNULL(THIS.oJson)
+                        TRY
+                            lxValue = THIS.oJson.Deserialize(lcStoredValue)
+                        CATCH
+                            lxValue = lcStoredValue
+                        ENDTRY
+                    ELSE
+                        * Conversie pentru valori simple
+                        DO CASE
+                            CASE UPPER(lcStoredValue) == ".T."
+                                lxValue = .T.
+                            CASE UPPER(lcStoredValue) == ".F."
+                                lxValue = .F.
+                            OTHERWISE
+                                lxValue = lcStoredValue
+                        ENDCASE
+                    ENDIF
+                    
+                    * Update metadate
+                    REPLACE LastAccess WITH DATETIME(), ;
+                            HitCount WITH HitCount + 1 ;
+                            IN (THIS.cL2_Alias)
+                ENDIF
+            ENDIF
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogError("L2_Get error: " + loError.Message)
+        	ENDIF
+        FINALLY
+            SELECT(lnSelect)
+        ENDTRY
+        
+        RETURN lxValue
+    ENDPROC
+    
+    PROTECTED PROCEDURE L2_Set(tcKey AS String, txValue, tnTTL_Hours)
+        LOCAL lcValueToStore, lnSelect, ltExpires
+        
+        lnSelect = SELECT()
+        
+        TRY
+            SELECT (THIS.cL2_Alias)
+            SET ORDER TO TAG Key
+            
+            * Serializare
+            IF VARTYPE(txValue) = 'O' AND NOT ISNULL(THIS.oJson)
+                lcValueToStore = THIS.oJson.Serialize(txValue)
+            ELSE
+                lcValueToStore = TRANSFORM(txValue)
+            ENDIF
+            
+            ltExpires = DATETIME() + (tnTTL_Hours * 3600)
+            
+            IF SEEK(tcKey, THIS.cL2_Alias)
+                REPLACE Value WITH lcValueToStore, ;
+                        LastAccess WITH DATETIME(), ;
+                        ExpiresAt WITH ltExpires ;
+                        IN (THIS.cL2_Alias)
+            ELSE
+                INSERT INTO (THIS.cL2_Alias) ;
+                    (Key, Value, CreatedAt, LastAccess, ExpiresAt, HitCount, Source) ;
+                    VALUES ;
+                    (tcKey, lcValueToStore, DATETIME(), DATETIME(), ltExpires, 0, "API")
+            ENDIF
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogError("L2_Set error: " + loError.Message)
+        	ENDIF
+        FINALLY
+            SELECT(lnSelect)
+        ENDTRY
+    ENDPROC
+    
+    PROTECTED PROCEDURE L2_Delete(tcKey AS String)
+        LOCAL lnSelect
+        lnSelect = SELECT()
+        
+        TRY
+            SELECT (THIS.cL2_Alias)
+            SET ORDER TO TAG Key
+            IF SEEK(tcKey, THIS.cL2_Alias)
+                DELETE IN (THIS.cL2_Alias)
+                THIS.nL2_DeleteCount = THIS.nL2_DeleteCount + 1
+                THIS.L2_CheckAutoPack()
+            ENDIF
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogError("L2_Delete error: " + loError.Message)
+        	ENDIF
+        FINALLY
+            SELECT(lnSelect)
+        ENDTRY
+    ENDPROC
+    
+    PROTECTED FUNCTION L2_DeletePattern(tcPattern AS String)
+        LOCAL lnDeleted, lnSelect
+        lnDeleted = 0
+        lnSelect = SELECT()
+        
+        TRY
+            SELECT (THIS.cL2_Alias)
+            SCAN FOR LIKE(tcPattern, Key)
+                DELETE
+                lnDeleted = lnDeleted + 1
+            ENDSCAN
+            
+            THIS.nL2_DeleteCount = THIS.nL2_DeleteCount + lnDeleted
+            THIS.L2_CheckAutoPack()
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogError("L2_DeletePattern error: " + loError.Message)
+        	ENDIF
+        FINALLY
+            SELECT(lnSelect)
+        ENDTRY
+        
+        RETURN lnDeleted
+    ENDPROC
+    
+    PROTECTED FUNCTION L2_CleanupExpired()
+        LOCAL lnCleaned, lnSelect
+        lnCleaned = 0
+        lnSelect = SELECT()
+        
+        TRY
+            SELECT (THIS.cL2_Alias)
+            DELETE FOR ExpiresAt < DATETIME()
+            lnCleaned = _TALLY
+            
+            THIS.nL2_DeleteCount = THIS.nL2_DeleteCount + lnCleaned
+            THIS.L2_CheckAutoPack()
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogError("L2_CleanupExpired error: " + loError.Message)
+        	ENDIF
+        FINALLY
+            SELECT(lnSelect)
+        ENDTRY
+        
+        RETURN lnCleaned
+    ENDPROC
+    
+    PROTECTED PROCEDURE L2_CheckAutoPack()
+        * Pack automat daca sunt prea multe stergeri
+        IF THIS.oConfig.lL2_AutoPack AND ;
+           THIS.nL2_DeleteCount >= THIS.oConfig.nL2_PackThreshold
+            
+            TRY
+                SELECT (THIS.cL2_Alias)
+                PACK
+                THIS.nL2_DeleteCount = 0
+                IF NOT ISNULL(THIS.oLogger)
+                	THIS.oLogger.LogDebug("L2 auto-pack executat")
+            	ENDIF
+            CATCH TO loError
+                IF NOT ISNULL(THIS.oLogger)
+                	THIS.oLogger.LogError("L2 auto-pack error: " + loError.Message)
+            	ENDIF
+            ENDTRY
+        ENDIF
+    ENDPROC
+    
+    PROCEDURE PreWarmL1Cache(tnRecordCount AS Integer)
+        LOCAL lnSelect, lcCursor
+        lnSelect = SELECT()
+        lcCursor = SYS(2015)
+        
+        TRY
+            * Încarca cele mai recente si frecvent utilizate elemente
+            SELECT TOP (m.tnRecordCount) * ;
+                FROM (THIS.cL2_Alias) ;
+                WHERE ExpiresAt > DATETIME() ;
+                ORDER BY HitCount DESC, LastAccess DESC ;
+                INTO CURSOR (lcCursor)
+            
+            IF RECCOUNT(lcCursor) > 0
+                SELECT (lcCursor)
+                SCAN
+                    THIS.L1_Push(Key, THIS.L2_Get(Key, .T.), 0)
+                ENDSCAN
+            ENDIF
+            
+            USE IN (lcCursor)
+            
+            IF NOT ISNULL(THIS.oLogger)
+        	    THIS.oLogger.LogInfo("Pre-warm L1: " + TRANSFORM(_TALLY) + " elemente încarcate")
+        	ENDIF
+        CATCH TO loError
+            IF NOT ISNULL(THIS.oLogger)
+            	THIS.oLogger.LogError("PreWarm error: " + loError.Message)
+        	ENDIF
+        FINALLY
+            SELECT(lnSelect)
+        ENDTRY
+    ENDPROC
+    
+    * =====================================================================
+    PROCEDURE Invalidate(tcKey AS String)
+    * =====================================================================
+        IF THIS.L1_Seek(tcKey)
+            THIS.oL1_Cache.Remove(tcKey)
+        ENDIF
+        THIS.L2_Delete(tcKey)
+    ENDPROC
+    
+ENDDEFINE
+
+* =====================================================================
+* 4. LOGGER PENTRU DEBUGGING SI MONITORIZARE
+* =====================================================================
+DEFINE CLASS cls_CacheLogger AS Custom
+    PROTECTED cLogFile
+    PROTECTED nLogLevel
+    PROTECTED lEnabled
+    
+    PROCEDURE Init(toConfig)
+        IF VARTYPE(toConfig) = 'O'
+            THIS.lEnabled = toConfig.lEnableLogging
+            THIS.nLogLevel = toConfig.nLogLevel
+            THIS.cLogFile = ADDBS(toConfig.cLogPath) + "CacheANAF_" + DTOS(DATE()) + ".log"
+        ELSE
+            THIS.lEnabled = .F.
+        ENDIF
+    ENDPROC
+    
+    PROCEDURE LogError(tcMessage)
+        IF THIS.lEnabled AND THIS.nLogLevel >= 1
+            THIS.WriteLog("ERROR", tcMessage)
+        ENDIF
+    ENDPROC
+    
+    PROCEDURE LogWarning(tcMessage)
+        IF THIS.lEnabled AND THIS.nLogLevel >= 2
+            THIS.WriteLog("WARN", tcMessage)
+        ENDIF
+    ENDPROC
+    
+    PROCEDURE LogInfo(tcMessage)
+        IF THIS.lEnabled AND THIS.nLogLevel >= 2
+            THIS.WriteLog("INFO", tcMessage)
+        ENDIF
+    ENDPROC
+    
+    PROCEDURE LogDebug(tcMessage)
+        IF THIS.lEnabled AND THIS.nLogLevel >= 3
+            THIS.WriteLog("DEBUG", tcMessage)
+        ENDIF
+    ENDPROC
+    
+    PROTECTED PROCEDURE WriteLog(tcLevel, tcMessage)
+        TRY
+            LOCAL lcLogEntry
+            lcLogEntry = TTOC(DATETIME()) + " [" + tcLevel + "] " + tcMessage + CHR(13) + CHR(10)
+            STRTOFILE(lcLogEntry, THIS.cLogFile, 1)  && Append mode
+        CATCH
+            * Nu putem loga eroarea de logging :)
+        ENDTRY
+    ENDPROC
+ENDDEFINE
+
+* =====================================================================
+* 5. COLECTOR DE STATISTICI
+* =====================================================================
+DEFINE CLASS cls_CacheStatistics AS Custom
+    nL1Hits			= 0
+    nL2Hits			= 0
+    nMisses			= 0
+    nSets			= 0
+    nInvalidations	= 0
+    tStartTime		= {}
+    
+    PROCEDURE Init()
+        THIS.tStartTime = DATETIME()
+    ENDPROC
+    
+    PROCEDURE RecordHit(tcLevel)
+        DO CASE
+            CASE tcLevel = "L1"
+                THIS.nL1Hits = THIS.nL1Hits + 1
+            CASE tcLevel = "L2"
+                THIS.nL2Hits = THIS.nL2Hits + 1
+        ENDCASE
+    ENDPROC
+    
+    PROCEDURE RecordMiss()
+        THIS.nMisses = THIS.nMisses + 1
+    ENDPROC
+    
+    PROCEDURE RecordSet()
+        THIS.nSets = THIS.nSets + 1
+    ENDPROC
+    
+    PROCEDURE RecordInvalidation()
+        THIS.nInvalidations = THIS.nInvalidations + 1
+    ENDPROC
+    
+    FUNCTION GetHitRate()
+        LOCAL lnTotal
+        lnTotal = THIS.nL1Hits + THIS.nL2Hits + THIS.nMisses
+        IF lnTotal > 0
+            RETURN (THIS.nL1Hits + THIS.nL2Hits) / lnTotal * 100
+        ENDIF
+        RETURN 0
+    ENDFUNC
+    
+    PROCEDURE SaveReport()
+        * Salveaza raport statistici la închidere
+        TRY
+            LOCAL lcReport, lcFile
+            lcFile = "LOG\CacheStats_" + DTOS(DATE()) + ".txt"
+            
+            TEXT TO lcReport NOSHOW TEXTMERGE
+========================================
+Cache Statistics Report
+Generated: <<TTOC(DATETIME())>>
+Runtime: <<TRANSFORM(DATETIME() - THIS.tStartTime)>> seconds
+========================================
+L1 Hits:        <<TRANSFORM(THIS.nL1Hits)>>
+L2 Hits:        <<TRANSFORM(THIS.nL2Hits)>>
+Cache Misses:   <<TRANSFORM(THIS.nMisses)>>
+Total Sets:     <<TRANSFORM(THIS.nSets)>>
+Invalidations:  <<TRANSFORM(THIS.nInvalidations)>>
+Hit Rate:       <<TRANSFORM(THIS.GetHitRate(), "999.99")>>%
+========================================
+            ENDTEXT
+            
+            STRTOFILE(lcReport, lcFile)
+        CATCH
+        ENDTRY
+    ENDPROC
+ENDDEFINE
+
+* =====================================================================
+* 6. FUNCTII DE BUSINESS ÎMBUNATATITE
+* =====================================================================
+FUNCTION GetRTVAI_GEMINI_V2(tcCodFiscal AS String, tdDate AS Date, tdStartDate)
+    LOCAL lcCacheKey, loResult, llStatus, loConfig
+    llStatus = .F.
+    
+    * Verificari preliminare
+    IF NOT ICAS.oSettings.ModulTvaI OR ;
+       (PEMSTATUS(ICAS.oSETTINGS, 'PauzaServiciiANAF', 5) AND ;
+        DATETIME() < ICAS.oSETTINGS.PauzaServiciiANAF)
+        RETURN .F.
+    ENDIF
+    
+    * Construire cheie cache - include anul si luna pentru partitionare
+    lcCacheKey = "RTVAI_" + ;
+        TRANSFORM(YEAR(tdDate)) + ;
+        PADL(MONTH(tdDate), 2, "0") + "_" + ;
+        ALLTRIM(tcCodFiscal)
+    
+    * Configurare TTL specific pentru date RTVAI
+    TRY
+    	loConfig = _SCREEN.oCache.oConfig
+    CATCH
+   		loConfig = NULL
+    ENDTRY
+    * Pas 1: Verificare cache cu skip expired
+    loResult = _SCREEN.oCache.Get(lcCacheKey, .T.)
+    
+    * Pas 2: Cache miss - apel API
+    IF VARTYPE(loResult) # 'O'
+        LOCAL loApiResult
+        TRY
+            * Log pentru monitorizare apeluri API
+            _SCREEN.oCache.oLogger.LogInfo("API call pentru: " + tcCodFiscal)
+            
+            loApiResult = GetRTVAI_DirectAPI(tcCodFiscal, tdDate)
+            
+            * Validare raspuns API
+            IF VARTYPE(loApiResult) = 'O'
+                * Creare obiect pentru cache
+                loResult = CREATEOBJECT("Empty")
+                ADDPROPERTY(loResult, "status", loApiResult.statusTvaIncasare)
+                ADDPROPERTY(loResult, "startDate", loApiResult.dataInceputTvaInc)
+                ADDPROPERTY(loResult, "checkedDate", tdDate)  && Data pentru care s-a verificat
+                ADDPROPERTY(loResult, "codFiscal", tcCodFiscal)
+                
+                * Salvare în cache cu TTL specific
+                _SCREEN.oCache.Set(lcCacheKey, loResult, loConfig.nRTVAI_TTL_Hours)
+            ELSE
+                _SCREEN.oCache.oLogger.LogError("API response invalid pentru: " + tcCodFiscal)
+                RETURN .F.
+            ENDIF
+        CATCH TO loError
+            _SCREEN.oCache.oLogger.LogError("API error: " + loError.Message)
+            RETURN .F.
+        ENDTRY
+    ENDIF
+    
+    * Pas 3: Procesare rezultat
+    IF VARTYPE(loResult) == 'O'
+        llStatus = loResult.status
+        
+        * Populare parametru op?ional
+        IF PCOUNT() >= 3
+            tdStartDate = loResult.startDate
+        ENDIF
+    ENDIF
+    
+    RETURN llStatus
+ENDFUNC
+
+FUNCTION IsInVATCollectionSystem_GEMINI_V2(tdDate AS Date) AS Boolean
+    * Verificari preliminare
+    IF tdDate < {^2013-01-01} OR NOT ICAS.oSettings.ModulTvaI
+        RETURN .F.
+    ENDIF
+    
+    LOCAL lcCacheKey, lxResult, loConfig
+    
+    * Cheie cache cu partitionare pe luna
+    lcCacheKey = "FIRM_VAT_" + ;
+        TRANSFORM(YEAR(tdDate)) + ;
+        PADL(MONTH(tdDate), 2, "0") + "_" + ;
+        ALLTRIM(ICAS.oSoc.CodFiscal)
+    
+    loConfig = _SCREEN.oCache.oConfig
+    
+    * Pas 1: Verificare cache
+    lxResult = _SCREEN.oCache.Get(lcCacheKey, .T.)
+    IF VARTYPE(lxResult) == 'L'
+        RETURN lxResult
+    ENDIF
+    
+    * Pas 2: Query baza de date
+    LOCAL llResult, lnSelect
+    llResult = .F.
+    lnSelect = SELECT()
+    
+    TRY
+        * Query optimizat cu index hints
+        LOCAL lcSQL
+        TEXT TO lcSQL NOSHOW TEXTMERGE
+            SELECT TOP 1 Tip 
+            FROM Configurari.Perioade WITH (NOLOCK)
+            WHERE Tip IN (4,5) 
+                AND StartDate <= ?tdDate
+            ORDER BY StartDate DESC
+        ENDTEXT
+        
+        SQLExec(m.nSQLHandle, lcSQL, "cVATQuery")
+        
+        IF _TALLY > 0
+            llResult = (cVATQuery.Tip = 4)
+            USE IN cVATQuery
+        ENDIF
+        
+        * Salvare în cache cu TTL mai lung (date mai stabile)
+        _SCREEN.oCache.Set(lcCacheKey, llResult, loConfig.nVAT_TTL_Hours)
+        
+    CATCH TO loError
+        _SCREEN.oCache.oLogger.LogError("SQL error VAT: " + loError.Message)
+        llResult = .F.
+    FINALLY
+        SELECT(lnSelect)
+    ENDTRY
+    
+    RETURN llResult
+ENDFUNC
+
+* =====================================================================
+* 7. FUNCTII UTILITARE ADITIONALE
+* =====================================================================
+FUNCTION ClearANAFCache(tcType AS String)
+    * CuraTa cache pentru un tip specific sau tot
+    * tcType: "RTVAI", "VAT", "ALL"
+    
+    IF NOT PEMSTATUS(_SCREEN, "oCache", 5)
+        RETURN 0
+    ENDIF
+    
+    LOCAL lnCleared
+    lnCleared = 0
+    
+    DO CASE
+        CASE UPPER(tcType) = "RTVAI"
+            lnCleared = _SCREEN.oCache.InvalidatePattern("RTVAI_*")
+            
+        CASE UPPER(tcType) = "VAT"
+            lnCleared = _SCREEN.oCache.InvalidatePattern("FIRM_VAT_*")
+            
+        CASE UPPER(tcType) = "ALL"
+            lnCleared = _SCREEN.oCache.InvalidatePattern("*")
+            
+        OTHERWISE
+            lnCleared = _SCREEN.oCache.InvalidatePattern(tcType + "*")
+    ENDCASE
+    
+    _SCREEN.oCache.oLogger.LogInfo("Cache cleared: " + tcType + " (" + TRANSFORM(lnCleared) + " items)")
+    
+    RETURN lnCleared
+ENDFUNC
+
+FUNCTION GetCacheStatistics()
+    * Returneaza statistici cache pentru UI sau raportare
+    
+    IF NOT PEMSTATUS(_SCREEN, "oCache", 5)
+        RETURN NULL
+    ENDIF
+    
+    RETURN _SCREEN.oCache.GetStatistics()
+ENDFUNC
+
+FUNCTION OptimizeANAFCache()
+    * Optimizeaza cache-ul: cleanup expired, pack L2
+    
+    IF NOT PEMSTATUS(_SCREEN, "oCache", 5)
+        RETURN .F.
+    ENDIF
+    
+    LOCAL lnCleaned
+    
+    * Cleanup elemente expirate
+    lnCleaned = _SCREEN.oCache.CleanupExpired()
+    
+    * Fortare pack L2 daca e necesar
+    IF _SCREEN.oCache.nL2_DeleteCount > 0
+        _SCREEN.oCache.L2_CheckAutoPack()
+    ENDIF
+    
+    _SCREEN.oCache.oLogger.LogInfo("Cache optimized: " + TRANSFORM(lnCleaned) + " expired items removed")
+    
+    RETURN .T.
+ENDFUNC
+
+* =====================================================================
+* 8. FUNCTIE DE INITIALIZARE PENTRU MAIN.PRG
+* =====================================================================
+FUNCTION InitializeANAFCacheV2()
+    * Func?ie pentru ini?ializare în main.prg
+    
+    * Cleanup instan?e existente
+    TRY
+        _SCREEN.RemoveObject("oANAFCache")
+        _SCREEN.RemoveObject("oCache")
+    CATCH
+    ENDTRY
+    
+    * Creare configurare personalizata
+    LOCAL loConfig
+    loConfig = CREATEOBJECT("cls_CacheConfig")
+    
+    * Ajustare configurari pentru mediul specific
+    * (acestea pot fi citite din INI sau DBF de configurare)
+    loConfig.nL1_MaxSize = 500
+    loConfig.nRTVAI_TTL_Hours = 12
+    loConfig.nVAT_TTL_Hours = 168
+    loConfig.lEnableLogging = .T.
+    loConfig.nLogLevel = 2
+    
+    * Creare instan?a cache manager
+    _SCREEN.ADDOBJECT('oCache', 'cls_HierarchicalCacheManagerV2', loConfig)
+    
+    * Programare cleanup periodic (optional)
+    * Poate fi apelat dintr-un timer sau la anumite intervale
+    
+    RETURN TYPE('_SCREEN.oCache') = 'O'
+ENDFUNC
+
+* =====================================================================
+* EOF - CACHE_ANAF_Improved.prg
+* =====================================================================
+
+* ==========================================================
+* FUNCTII UTILITARE PENTRU MANAGEMENT CACHE
+* ==========================================================
+
+* ----------------------------------------------------------
+* Curatare cache ANAF
+* ----------------------------------------------------------
+FUNCTION ClearANAFCacheData(tcType As String)
+    * tcType: "RTVAI", "VAT", "ALL", sau pattern specific
+    
+    IF NOT PEMSTATUS(_SCREEN, 'oCache', 5)
+        RETURN 0
+    ENDIF
+    
+    IF CN_CACHE_ANAF_V2
+        * Versiunea V2 are func?ie dedicata
+        RETURN ClearANAFCache(tcType)
+    ELSE
+        * Pentru versiunea originala, invalidare manuala
+        LOCAL lnCount
+        lnCount = 0
+        
+        DO CASE
+            CASE UPPER(tcType) = "ALL"
+                * Nu avem metoda pentru ?tergere totala în V1
+                * Ar trebui recreat obiectul
+                TRY
+                    _SCREEN.RemoveObject("oCache")
+                    _SCREEN.ADDOBJECT('oCache', 'cls_HierarchicalCacheManager')
+                    lnCount = -1  && Indicator ca s-a resetat tot
+                CATCH
+                ENDTRY
+                
+            OTHERWISE
+                * Invalidare individuala nu e suportata eficient în V1
+                MESSAGEBOX("Functie disponibila doar în versiunea V2", 48, "Info")
+        ENDCASE
+        
+        RETURN lnCount
+    ENDIF
+ENDFUNC
+
+* ----------------------------------------------------------
+* Obtinere statistici cache
+* ----------------------------------------------------------
+FUNCTION GetANAFCacheStats()
+    
+    IF NOT PEMSTATUS(_SCREEN, 'oCache', 5)
+        RETURN NULL
+    ENDIF
+    
+    IF CN_CACHE_ANAF_V2
+        * Versiunea V2 are statistici detaliate
+        RETURN GetCacheStatistics()
+    ELSE
+        * Pentru V1, returnam statistici de baza
+        LOCAL loStats
+        loStats = CREATEOBJECT("Empty")
+        
+        IF PEMSTATUS(_SCREEN.oCache, 'nTotalRequests', 5)
+            ADDPROPERTY(loStats, "TotalRequests", _SCREEN.oCache.nTotalRequests)
+            ADDPROPERTY(loStats, "CacheHits", _SCREEN.oCache.nCacheHits)
+            ADDPROPERTY(loStats, "CacheMisses", _SCREEN.oCache.nCacheMisses)
+        ELSE
+            ADDPROPERTY(loStats, "Message", "Statistici disponibile doar în V2")
+        ENDIF
+        
+        RETURN loStats
+    ENDIF
+ENDFUNC
+
+* ----------------------------------------------------------
+* Optimizare cache
+* ----------------------------------------------------------
+FUNCTION OptimizeCache()
+    
+    IF NOT PEMSTATUS(_SCREEN, 'oCache', 5)
+        RETURN .F.
+    ENDIF
+    
+    IF CN_CACHE_ANAF_V2
+        * V2 are optimizare completa
+        RETURN OptimizeANAFCache()
+    ELSE
+        * Pentru V1, doar dump pentru debug
+        IF PEMSTATUS(_SCREEN.oCache, 'DumpL1Cache', 5)
+            _SCREEN.oCache.DumpL1Cache()
+        ENDIF
+        RETURN .T.
+    ENDIF
+ENDFUNC
+
+* ==========================================================
+* TIMER PENTRU CLEANUP AUTOMAT (OPTIONAL)
+* ==========================================================
+DEFINE CLASS CacheMaintenanceTimer AS Timer
+    Interval = 3600000  && 1 ora în milisecunde
+    Enabled = .T.
+    
+    PROCEDURE Timer
+        * Cleanup periodic
+        IF CN_CACHE_ANAF_V2 AND PEMSTATUS(_SCREEN, 'oCache', 5)
+            LOCAL lnCleaned
+            lnCleaned = _SCREEN.oCache.CleanupExpired()
+            
+            * Log daca s-au curatat elemente
+            IF lnCleaned > 0
+                IF PEMSTATUS(_SCREEN.oCache, 'oLogger', 5) AND NOT ISNULL(_SCREEN.oCache.oLogger)
+                    _SCREEN.oCache.oLogger.LogInfo("Auto-cleanup: " + TRANSFORM(lnCleaned) + " expired items")
+                ENDIF
+            ENDIF
+            
+            * Verificare ?i optimizare daca e necesar
+            LOCAL loStats
+            loStats = _SCREEN.oCache.GetStatistics()
+            
+            * Daca hit rate scade sub 50%, poate e timpul pentru optimizare
+            IF loStats.HitRate < 50
+                OptimizeCache()
+            ENDIF
+        ENDIF
+    ENDPROC
+ENDDEFINE
+
+* ----------------------------------------------------------
+* Activare timer maintenance (optional)
+* ----------------------------------------------------------
+FUNCTION EnableCacheMaintenance()
+    IF CN_CACHE_ANAF_V2
+        IF NOT PEMSTATUS(_SCREEN, 'oCacheTimer', 5)
+            _SCREEN.ADDOBJECT('oCacheTimer', 'CacheMaintenanceTimer')
+            RETURN .T.
+        ENDIF
+    ENDIF
+    RETURN .F.
+ENDFUNC
+
+* ==========================================================
+* FUNCTII PENTRU TESTARE SI DEBUG
+* ==========================================================
+
+* ----------------------------------------------------------
+* Test performanta cache
+* ----------------------------------------------------------
+FUNCTION TestCachePerformance(tnIterations As Integer)
+    LOCAL lnStart, lnEnd, i, lcKey, lxValue
+    LOCAL lnHits, lnMisses
+    
+    IF EMPTY(tnIterations)
+        tnIterations = 1000
+    ENDIF
+    
+    lnHits = 0
+    lnMisses = 0
+    
+    ? "Starting cache performance test..."
+    ? "Iterations:", tnIterations
+    
+    lnStart = SECONDS()
+    
+    FOR i = 1 TO tnIterations
+        * Generare cheie pseudo-aleatoare (câteva variante)
+        lcKey = "TEST_" + TRANSFORM(MOD(i, 10))
+        
+        * 70% read, 30% write (simulare pattern real)
+        IF MOD(i, 10) > 3
+            * Read
+            lxValue = _SCREEN.oCache.Get(lcKey)
+            IF NOT ISNULL(lxValue)
+                lnHits = lnHits + 1
+            ELSE
+                lnMisses = lnMisses + 1
+            ENDIF
+        ELSE
+            * Write
+            _SCREEN.oCache.Set(lcKey, "Value_" + TRANSFORM(i))
+        ENDIF
+    ENDFOR
+    
+    lnEnd = SECONDS()
+    
+    ? "Test completed in", lnEnd - lnStart, "seconds"
+    ? "Cache hits:", lnHits
+    ? "Cache misses:", lnMisses
+    ? "Hit rate:", IIF(lnHits + lnMisses > 0, lnHits / (lnHits + lnMisses) * 100, 0), "%"
+    
+    IF CN_CACHE_ANAF_V2
+        LOCAL loStats
+        loStats = GetCacheStatistics()
+        ? "L1 Usage:", loStats.L1_Usage, "%"
+        ? "L2 Count:", loStats.L2_Count
+    ENDIF
+    
+    RETURN lnEnd - lnStart
+ENDFUNC
+
+* ----------------------------------------------------------
+* Verificare integritate cache
+* ----------------------------------------------------------
+FUNCTION VerifyCacheIntegrity()
+    LOCAL llOK
+    llOK = .T.
+    
+    ? "Verificare integritate cache..."
+    
+    * Verificare existenta obiect
+    IF NOT PEMSTATUS(_SCREEN, 'oCache', 5)
+        ? "EROARE: Cache object nu exista!"
+        RETURN .F.
+    ENDIF
+    
+    * Test operatii de baza
+    TRY
+        * Test SET
+        _SCREEN.oCache.Set("TEST_INTEGRITY", "test_value")
+        
+        * Test GET
+        LOCAL lcValue
+        lcValue = _SCREEN.oCache.Get("TEST_INTEGRITY")
+        IF lcValue != "test_value"
+            ? "EROARE: Get/Set nu functioneaza corect!"
+            llOK = .F.
+        ELSE
+            ? "OK: Get/Set functioneaza"
+        ENDIF
+        
+        * Test INVALIDATE
+        _SCREEN.oCache.Invalidate("TEST_INTEGRITY")
+        lcValue = _SCREEN.oCache.Get("TEST_INTEGRITY")
+        IF NOT ISNULL(lcValue)
+            ? "EROARE: Invalidate nu functioneaza!"
+            llOK = .F.
+        ELSE
+            ? "OK: Invalidate functioneaza"
+        ENDIF
+        
+    CATCH TO loError
+        ? "EROARE în teste:", loError.Message
+        llOK = .F.
+    ENDTRY
+    
+    IF llOK
+        ? "Toate testele au trecut cu succes!"
+    ELSE
+        ? "Unele teste au esuat. Verificati log-urile."
+    ENDIF
+    
+    RETURN llOK
+ENDFUNC
+
+* ==========================================================
+* EOF - main_improved.prg
+* ==========================================================

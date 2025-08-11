@@ -1,0 +1,416 @@
+* ==========================================================
+* INITIALIZARE CACHE ANAF ÎMBUNATATIT
+* ==========================================================
+* Versiunea 2.0 - Cu suport pentru ambele versiuni de cache
+* ==========================================================
+
+* Definire constanta pentru alegerea versiunii
+* Poate fi citita din configurare sau setata manual
+#DEFINE CN_CACHE_ANAF_GEMINI	.T.
+#DEFINE CN_CACHE_ANAF_V2		.T.        && Foloseste versiunea îmbunata?ita
+
+* ==========================================================
+* CLEANUP INSTANTE ANTERIOARE
+* ==========================================================
+TRY
+    _SCREEN.RemoveObject("oANAFCache")
+    _SCREEN.RemoveObject("oCache")
+CATCH
+ENDTRY
+
+* ==========================================================
+* INITIALIZARE CACHE SINGLETON
+* ==========================================================
+IF TYPE('_SCREEN.oCache') <> 'O'
+    
+    IF CN_CACHE_ANAF_GEMINI
+        
+        IF CN_CACHE_ANAF_V2
+            * Folose?te versiunea îmbunata?ita
+            SET PROCEDURE TO CACHE_ANAF_Improved ADDITIVE
+            
+            * Creare configurare personalizata
+            LOCAL loConfig
+            loConfig = CREATEOBJECT("cls_CacheConfig")
+            
+            * Citire configurari din setari aplica?ie (op?ional)
+            IF PEMSTATUS(ICAS.oSettings, 'CacheL1Size', 5)
+                loConfig.nL1_MaxSize = ICAS.oSettings.CacheL1Size
+            ENDIF
+            
+            IF PEMSTATUS(ICAS.oSettings, 'CacheTTL_RTVAI', 5)
+                loConfig.nRTVAI_TTL_Hours = ICAS.oSettings.CacheTTL_RTVAI
+            ENDIF
+            
+            IF PEMSTATUS(ICAS.oSettings, 'CacheEnableLog', 5)
+                loConfig.lEnableLogging = ICAS.oSettings.CacheEnableLog
+            ENDIF
+            
+            * Creare instan?a cache manager V2
+            _SCREEN.ADDOBJECT('oCache', 'cls_HierarchicalCacheManagerV2', loConfig)
+            
+            * Log confirmare
+            IF loConfig.lEnableLogging
+                _SCREEN.oCache.oLogger.LogInfo("Cache ANAF V2 initializat cu succes")
+            ENDIF
+            
+        ELSE
+            * Folose?te versiunea originala Gemini
+            SET PROCEDURE TO CACHE_ANAF_GEMINI ADDITIVE
+            _SCREEN.ADDOBJECT('oCache', 'cls_HierarchicalCacheManager')
+        ENDIF
+        
+    ELSE
+        * Folose?te versiunea legacy existenta
+        _SCREEN.ADDOBJECT('oANAFCache', 'ANAFCacheManager')
+    ENDIF
+    
+ENDIF
+
+* ==========================================================
+* FUNCTII WRAPPER PENTRU COMPATIBILITATE
+* ==========================================================
+
+* ----------------------------------------------------------
+* Verificare RTVAI cu suport pentru toate versiunile
+* ----------------------------------------------------------
+FUNCTION GetRTVAI(tcCodFiscal As String, tdDate As Date, tdStartDate) As Boolean ;
+    HelpString 'Verifica daca o firma este in RTVAI la o anumita data'
+    
+    IF CN_CACHE_ANAF_GEMINI
+        
+        IF CN_CACHE_ANAF_V2
+            * Versiunea îmbunata?ita
+            RETURN GetRTVAI_GEMINI_V2(tcCodFiscal, tdDate, @tdStartDate)
+        ELSE
+            * Versiunea originala Gemini
+            RETURN GetRTVAI_GEMINI(tcCodFiscal, tdDate, @tdStartDate)
+        ENDIF
+        
+    ELSE
+        * Versiunea legacy
+        RETURN GetRTVAI_Legacy(tcCodFiscal, tdDate, @tdStartDate)
+    ENDIF
+    
+ENDFUNC
+
+* ----------------------------------------------------------
+* Verificare sistem TVA la încasare
+* ----------------------------------------------------------
+FUNCTION IsInVATCollectionSystem(tdDate As Date) As Boolean ;
+    HelpString 'Daca data documentului este in perioada in care FIRMA aplica Sistemul TVA la incasare'
+    
+    IF CN_CACHE_ANAF_GEMINI
+        
+        IF CN_CACHE_ANAF_V2
+            * Versiunea îmbunata?ita
+            RETURN IsInVATCollectionSystem_GEMINI_V2(tdDate)
+        ELSE
+            * Versiunea originala Gemini
+            RETURN IsInVATCollectionSystem_GEMINI(tdDate)
+        ENDIF
+        
+    ELSE
+        * Versiunea legacy
+        RETURN IsInVATCollectionSystem_Legacy(tdDate)
+    ENDIF
+    
+ENDFUNC
+
+* ----------------------------------------------------------
+* Apel direct ANAF – separat pentru claritate
+* ----------------------------------------------------------
+FUNCTION GetRTVAI_DirectAPI(tcCodFiscal, tdDate)
+    LOCAL loReturn, oANAF, llSuccess
+    
+    * Creare obiect return
+    loReturn = CREATEOBJECT('Empty')
+    ADDPROPERTY(loReturn, 'statusTvaIncasare', .F.)
+    ADDPROPERTY(loReturn, 'dataInceputTvaInc', {})
+    ADDPROPERTY(loReturn, 'success', .F.)
+    ADDPROPERTY(loReturn, 'errorMessage', '')
+    
+    llSuccess = .F.
+    
+    TRY
+        * Creare obiect ANAF
+        oANAF = CREATEOBJECT("ANAF")
+        
+        * Apel serviciu ANAF
+        oANAF.PlatitorTvaRest(tdDate, tcCodFiscal, .F., .T.)
+        
+        * Verificare rezultat
+        IF USED("ANAF")
+            loReturn.statusTvaIncasare = ANAF.statusTvaIncasare
+            loReturn.dataInceputTvaInc = ANAF.dataInceputTvaInc
+            loReturn.success = .T.
+            
+            USE IN ANAF
+            llSuccess = .T.
+        ELSE
+            loReturn.errorMessage = "Nu s-au primit date de la ANAF"
+        ENDIF
+        
+    CATCH TO loError
+        loReturn.errorMessage = "Eroare API: " + loError.Message
+        
+        * Log eroare daca avem cache V2
+        IF CN_CACHE_ANAF_V2 AND PEMSTATUS(_SCREEN, 'oCache', 5)
+            _SCREEN.oCache.oLogger.LogError("GetRTVAI_DirectAPI: " + loError.Message)
+        ENDIF
+    ENDTRY
+    
+    RETURN loReturn
+ENDFUNC
+
+* ==========================================================
+* FUNCTII UTILITARE PENTRU MANAGEMENT CACHE
+* ==========================================================
+
+* ----------------------------------------------------------
+* Curatare cache ANAF
+* ----------------------------------------------------------
+FUNCTION ClearANAFCacheData(tcType As String)
+    * tcType: "RTVAI", "VAT", "ALL", sau pattern specific
+    
+    IF NOT PEMSTATUS(_SCREEN, 'oCache', 5)
+        RETURN 0
+    ENDIF
+    
+    IF CN_CACHE_ANAF_V2
+        * Versiunea V2 are func?ie dedicata
+        RETURN ClearANAFCache(tcType)
+    ELSE
+        * Pentru versiunea originala, invalidare manuala
+        LOCAL lnCount
+        lnCount = 0
+        
+        DO CASE
+            CASE UPPER(tcType) = "ALL"
+                * Nu avem metoda pentru ?tergere totala în V1
+                * Ar trebui recreat obiectul
+                TRY
+                    _SCREEN.RemoveObject("oCache")
+                    _SCREEN.ADDOBJECT('oCache', 'cls_HierarchicalCacheManager')
+                    lnCount = -1  && Indicator ca s-a resetat tot
+                CATCH
+                ENDTRY
+                
+            OTHERWISE
+                * Invalidare individuala nu e suportata eficient în V1
+                MESSAGEBOX("Functie disponibila doar în versiunea V2", 48, "Info")
+        ENDCASE
+        
+        RETURN lnCount
+    ENDIF
+ENDFUNC
+
+* ----------------------------------------------------------
+* Obtinere statistici cache
+* ----------------------------------------------------------
+FUNCTION GetANAFCacheStats()
+    
+    IF NOT PEMSTATUS(_SCREEN, 'oCache', 5)
+        RETURN NULL
+    ENDIF
+    
+    IF CN_CACHE_ANAF_V2
+        * Versiunea V2 are statistici detaliate
+        RETURN GetCacheStatistics()
+    ELSE
+        * Pentru V1, returnam statistici de baza
+        LOCAL loStats
+        loStats = CREATEOBJECT("Empty")
+        
+        IF PEMSTATUS(_SCREEN.oCache, 'nTotalRequests', 5)
+            ADDPROPERTY(loStats, "TotalRequests", _SCREEN.oCache.nTotalRequests)
+            ADDPROPERTY(loStats, "CacheHits", _SCREEN.oCache.nCacheHits)
+            ADDPROPERTY(loStats, "CacheMisses", _SCREEN.oCache.nCacheMisses)
+        ELSE
+            ADDPROPERTY(loStats, "Message", "Statistici disponibile doar în V2")
+        ENDIF
+        
+        RETURN loStats
+    ENDIF
+ENDFUNC
+
+* ----------------------------------------------------------
+* Optimizare cache
+* ----------------------------------------------------------
+FUNCTION OptimizeCache()
+    
+    IF NOT PEMSTATUS(_SCREEN, 'oCache', 5)
+        RETURN .F.
+    ENDIF
+    
+    IF CN_CACHE_ANAF_V2
+        * V2 are optimizare completa
+        RETURN OptimizeANAFCache()
+    ELSE
+        * Pentru V1, doar dump pentru debug
+        IF PEMSTATUS(_SCREEN.oCache, 'DumpL1Cache', 5)
+            _SCREEN.oCache.DumpL1Cache()
+        ENDIF
+        RETURN .T.
+    ENDIF
+ENDFUNC
+
+* ==========================================================
+* TIMER PENTRU CLEANUP AUTOMAT (OP?IONAL)
+* ==========================================================
+DEFINE CLASS CacheMaintenanceTimer AS Timer
+    Interval = 3600000  && 1 ora în milisecunde
+    Enabled = .T.
+    
+    PROCEDURE Timer
+        * Cleanup periodic
+        IF CN_CACHE_ANAF_V2 AND PEMSTATUS(_SCREEN, 'oCache', 5)
+            LOCAL lnCleaned
+            lnCleaned = _SCREEN.oCache.CleanupExpired()
+            
+            * Log daca s-au cura?at elemente
+            IF lnCleaned > 0
+                _SCREEN.oCache.oLogger.LogInfo("Auto-cleanup: " + TRANSFORM(lnCleaned) + " expired items")
+            ENDIF
+            
+            * Verificare ?i optimizare daca e necesar
+            LOCAL loStats
+            loStats = _SCREEN.oCache.GetStatistics()
+            
+            * Daca hit rate scade sub 50%, poate e timpul pentru optimizare
+            IF loStats.HitRate < 50
+                OptimizeCache()
+            ENDIF
+        ENDIF
+    ENDPROC
+ENDDEFINE
+
+* ----------------------------------------------------------
+* Activare timer maintenance (op?ional)
+* ----------------------------------------------------------
+FUNCTION EnableCacheMaintenance()
+    IF CN_CACHE_ANAF_V2
+        IF NOT PEMSTATUS(_SCREEN, 'oCacheTimer', 5)
+            _SCREEN.ADDOBJECT('oCacheTimer', 'CacheMaintenanceTimer')
+            RETURN .T.
+        ENDIF
+    ENDIF
+    RETURN .F.
+ENDFUNC
+
+* ==========================================================
+* FUNC?II PENTRU TESTARE ?I DEBUG
+* ==========================================================
+
+* ----------------------------------------------------------
+* Test performanta cache
+* ----------------------------------------------------------
+FUNCTION TestCachePerformance(tnIterations As Integer)
+    LOCAL lnStart, lnEnd, i, lcKey, lxValue
+    LOCAL lnHits, lnMisses
+    
+    IF EMPTY(tnIterations)
+        tnIterations = 1000
+    ENDIF
+    
+    lnHits = 0
+    lnMisses = 0
+    
+    ? "Starting cache performance test..."
+    ? "Iterations:", tnIterations
+    
+    lnStart = SECONDS()
+    
+    FOR i = 1 TO tnIterations
+        * Generare cheie pseudo-aleatoare (câteva variante)
+        lcKey = "TEST_" + TRANSFORM(MOD(i, 10))
+        
+        * 70% read, 30% write (simulare pattern real)
+        IF MOD(i, 10) > 3
+            * Read
+            lxValue = _SCREEN.oCache.Get(lcKey)
+            IF NOT ISNULL(lxValue)
+                lnHits = lnHits + 1
+            ELSE
+                lnMisses = lnMisses + 1
+            ENDIF
+        ELSE
+            * Write
+            _SCREEN.oCache.Set(lcKey, "Value_" + TRANSFORM(i))
+        ENDIF
+    ENDFOR
+    
+    lnEnd = SECONDS()
+    
+    ? "Test completed in", lnEnd - lnStart, "seconds"
+    ? "Cache hits:", lnHits
+    ? "Cache misses:", lnMisses
+    ? "Hit rate:", IIF(lnHits + lnMisses > 0, lnHits / (lnHits + lnMisses) * 100, 0), "%"
+    
+    IF CN_CACHE_ANAF_V2
+        LOCAL loStats
+        loStats = GetCacheStatistics()
+        ? "L1 Usage:", loStats.L1_Usage, "%"
+        ? "L2 Count:", loStats.L2_Count
+    ENDIF
+    
+    RETURN lnEnd - lnStart
+ENDFUNC
+
+* ----------------------------------------------------------
+* Verificare integritate cache
+* ----------------------------------------------------------
+FUNCTION VerifyCacheIntegrity()
+    LOCAL llOK
+    llOK = .T.
+    
+    ? "Verificare integritate cache..."
+    
+    * Verificare existen?a obiect
+    IF NOT PEMSTATUS(_SCREEN, 'oCache', 5)
+        ? "EROARE: Cache object nu exista!"
+        RETURN .F.
+    ENDIF
+    
+    * Test opera?ii de baza
+    TRY
+        * Test SET
+        _SCREEN.oCache.Set("TEST_INTEGRITY", "test_value")
+        
+        * Test GET
+        LOCAL lcValue
+        lcValue = _SCREEN.oCache.Get("TEST_INTEGRITY")
+        IF lcValue != "test_value"
+            ? "EROARE: Get/Set nu func?ioneaza corect!"
+            llOK = .F.
+        ELSE
+            ? "OK: Get/Set functioneaza"
+        ENDIF
+        
+        * Test INVALIDATE
+        _SCREEN.oCache.Invalidate("TEST_INTEGRITY")
+        lcValue = _SCREEN.oCache.Get("TEST_INTEGRITY")
+        IF NOT ISNULL(lcValue)
+            ? "EROARE: Invalidate nu func?ioneaza!"
+            llOK = .F.
+        ELSE
+            ? "OK: Invalidate func?ioneaza"
+        ENDIF
+        
+    CATCH TO loError
+        ? "EROARE în teste:", loError.Message
+        llOK = .F.
+    ENDTRY
+    
+    IF llOK
+        ? "Toate testele au trecut cu succes!"
+    ELSE
+        ? "Unele teste au e?uat. Verifica?i log-urile."
+    ENDIF
+    
+    RETURN llOK
+ENDFUNC
+
+* ==========================================================
+* EOF - main_improved.prg
+* ==========================================================

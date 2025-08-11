@@ -1,0 +1,147 @@
+FUNCTION GetRTVAI(tcCodFiscal As String, tdDate As Date, tdStartDate) As Boolean ;
+    HelpString 'Verifica daca o firma este in RTVAI la o anumita data'
+    
+    
+    IF CN_CACHE_ANAF_GEMINI
+        
+	    If CN_USE_SIMPLE_CACHE
+            * Versiunea simpla
+            RETURN GetRTVAI_Simple(tcCodFiscal, tdDate, @tdStartDate)
+		ENDIF
+        
+        IF CN_CACHE_ANAF_V2
+            * Versiunea îmbunatatita
+            RETURN GetRTVAI_GEMINI_V2(tcCodFiscal, tdDate, @tdStartDate)
+        ELSE
+            * Versiunea originala Gemini
+            RETURN GetRTVAI_GEMINI(tcCodFiscal, tdDate, @tdStartDate)
+        ENDIF
+        
+    ELSE
+        * Versiunea legacy
+        RETURN GetRTVAI_LEGACY(tcCodFiscal, tdDate, @tdStartDate)
+    ENDIF
+    
+ENDFUNC
+
+* ----------------------------------------------------------
+* Apel direct ANAF – separat pentru claritate
+* ----------------------------------------------------------
+FUNCTION GetRTVAI_DirectAPI(tcCodFiscal, tdDate)
+    LOCAL loReturn, oANAF, llSuccess
+    
+    * Creare obiect return
+    loReturn = CREATEOBJECT('Empty')
+    ADDPROPERTY(loReturn, 'statusTvaIncasare', .F.)
+    ADDPROPERTY(loReturn, 'dataInceputTvaInc', {})
+    ADDPROPERTY(loReturn, 'success', .F.)
+    ADDPROPERTY(loReturn, 'errorMessage', '')
+    
+    llSuccess = .F.
+    
+    TRY
+        * Creare obiect ANAF
+        oANAF = CREATEOBJECT("ANAF")
+        
+        * Apel serviciu ANAF
+        oANAF.PlatitorTvaRest(tdDate, tcCodFiscal, .F., .T.)
+        
+        * Verificare rezultat
+        IF USED("ANAF")
+            loReturn.statusTvaIncasare = ANAF.statusTvaIncasare
+            loReturn.dataInceputTvaInc = ANAF.dataInceputTvaInc
+            loReturn.success = .T.
+            
+            USE IN ANAF
+            llSuccess = .T.
+        ELSE
+            loReturn.errorMessage = "Nu s-au primit date de la ANAF"
+        ENDIF
+        
+    CATCH TO loError
+        loReturn.errorMessage = "Eroare API: " + loError.Message
+        
+        * Log eroare daca avem cache V2
+        IF CN_CACHE_ANAF_V2 AND PEMSTATUS(_SCREEN, 'oCache', 5)
+            IF PEMSTATUS(_SCREEN.oCache, 'oLogger', 5) AND NOT ISNULL(_SCREEN.oCache.oLogger)
+                _SCREEN.oCache.oLogger.LogError("GetRTVAI_DirectAPI: " + loError.Message)
+            ENDIF
+        ENDIF
+    ENDTRY
+    
+    RETURN loReturn
+ENDFUNC
+
+* ----------------------------------------------------------
+* Verificare sistem TVA la încasare
+* ----------------------------------------------------------
+FUNCTION IsInVATCollectionSystem(tdDate As Date) As Boolean ;
+    HelpString 'Daca data documentului este in perioada in care FIRMA aplica Sistemul TVA la incasare'
+    
+    IF CN_CACHE_ANAF_GEMINI
+        
+        If CN_USE_SIMPLE_CACHE
+            * Versiunea simpla
+            RETURN IsInVATCollectionSystem_Simple(tdDate)        
+        ENDIF
+        
+        IF CN_CACHE_ANAF_V2
+            * Versiunea îmbunatatita
+            RETURN IsInVATCollectionSystem_GEMINI_V2(tdDate)
+        ELSE
+            * Versiunea originala Gemini
+            RETURN IsInVATCollectionSystem_GEMINI(tdDate)
+        ENDIF
+        
+    ELSE
+        * Versiunea legacy
+        RETURN IsInVATCollectionSystem_LEGACY(tdDate)
+    ENDIF
+    
+ENDFUNC
+
+* ----------------------------------------------------------
+* Verificare RTVAI – O(log n) cache, O(n) API
+* ----------------------------------------------------------
+FUNCTION GetRTVAI_LEGACY(tcCodFiscal As String, tdDate As Date, tdStartDate) As Boolean HelpString 'Verifica daca o firma este in RTVAI la o anumita data'
+	
+	IF CN_CACHE_ANAF_GEMINI
+	
+		RETURN GetRTVAI_GEMINI(tcCodFiscal, tdDate, @tdStartDate)
+
+	ENDIF
+	
+    *IF NOT ICAS.oSettings.ModulTvaI OR ;
+       (PemStatus(ICAS.oSETTINGS, 'PauzaServiciiANAF', 5) AND ;
+        DateTime() < ICAS.oSETTINGS.PauzaServiciiANAF)
+    *    RETURN .F.
+    *ENDIF
+	Local loSaveSelect As Object, lRetVal As Boolean
+	loSaveSelect=oFactory_New("SaveSelect")
+	
+	If Not ICAS.oSettings.ModulTvaI
+		Return .F.
+	EndIf
+	If PemStatus(ICAS.oSETTINGS, 'PauzaServiciiANAF', 5) And DateTime()<ICAS.oSETTINGS.PauzaServiciiANAF
+		Return .F.
+	EndIf
+	If PCount()<2
+		tdDate=Date()
+	EndIf    
+    
+    LOCAL lcHashKey, lxCache
+    lcHashKey = GetANAFHashKey(tcCodFiscal, tdDate)
+
+    lxCache = _SCREEN.oANAFCache.GetFromCache(lcHashKey, "Is_RTVAI")
+    IF NOT ISNULL(lxCache)
+        RETURN lxCache
+    ENDIF
+
+ 	Local loResult 
+    
+    loResult = GetRTVAI_DirectAPI(tcCodFiscal, tdDate)
+    *llResult = GetRTVAI_DirectAPI(tcCodFiscal, tdDate)
+    llResult = loResult.statusTvaIncasare
+    _SCREEN.oANAFCache.SaveToCache(lcHashKey, llResult, NULL, loResult.dataInceputTvaInc)
+    RETURN llResult
+ENDFUNC
