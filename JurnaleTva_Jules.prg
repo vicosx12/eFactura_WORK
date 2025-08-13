@@ -180,27 +180,32 @@ ENDPROC
 *!*	Conține logica pentru Jurnalul de Cumpărări.
 PROCEDURE _ProcessPurchases(toEnv As Object)
 	_GetPurchaseData(toEnv)
-	_Log("Datele primare pentru Cumpărări au fost extrase.",.F.,toEnv)
+	_Log("Datele primare pentru Cumparari au fost extrase.",.F.,toEnv)
 	IF toEnv.oSettings.ModulTvaI
 		_GetPreviousPeriodVatOnCollectionPurchases(toEnv)
-		_Log("Facturile cu TVA la încasare din perioadele anterioare au fost adăugate.",.F.,toEnv)
+		_Log("Facturile cu TVA la încasare din perioadele anterioare au fost adaugate.",.F.,toEnv)
 	ENDIF
 	_ClassifyPurchases(toEnv)
-	_Log("Clasificarea înregistrărilor de cumpărări a fost finalizată (set-based).",.F.,toEnv)
-	IF NOT toEnv.lOnlyInvoice
-		_ProcessMiscPurchasesFromRegister(toEnv)
-		_Log("Notele contabile diverse (cumpărări) au fost procesate.",.F.,toEnv)
-	ENDIF
-	SELECT Id_Intrare, Data, Data_Doc, Nr, Denumire, Cod_Fisc, Cod, Tva_Art, Tip, TvaI, Cod_Tert, Tip_Tert, Indice, ;
+	_Log("Clasificarea înregistrarilor de cumparari a fost finalizata (set-based).",.F.,toEnv)
+
+	SELECT Id_Intrare, Data, Data_Doc, Nr, Denumire, Cod_Fisc, Cod, Tva_Art, Tip, NVL(TvaI, .F.) as TvaI, Cod_Tert, Tip_Tert, Indice, ;
 		   SUM(Total) As Total, SUM(Baza_Tva) As Baza_Tva, SUM(Tva) As Tva, ;
 		   SUM(TotalN) As TotalN, SUM(TotalN-TvaN) As Baza_TvaN, SUM(TvaN) As TvaN, ;
 		   SUM(TotalInc) As TotalInc, SUM(TotalInc-TvaInc) As Baza_TvaInc, SUM(TvaInc) As TvaInc, ;
 		   CodTvaUser, Fel_D, Curs, Tip_Ded, Cont ;
 	FROM JC_Intermed ;
-	GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18 ;
+	GROUP BY Id_Intrare, Data, Data_Doc, Nr, Denumire, Cod_Fisc, Cod, Tva_Art, Tip, TvaI, Cod_Tert, Tip_Tert, Indice, CodTvaUser, Fel_D, Curs, Tip_Ded, Cont ;
 	ORDER BY Data ;
 	INTO CURSOR JCump READWRITE
-	_Log("Gruparea finală a datelor de cumpărări (JCump) a fost realizată.",.F.,toEnv)
+	_Log("Gruparea finala a datelor de cumparari (JCump) a fost realizata.",.F.,toEnv)
+
+
+	IF NOT toEnv.lOnlyInvoice
+		_ProcessMiscPurchasesFromRegister(toEnv)
+		_Log("Notele contabile diverse (cumparari) au fost procesate.",.F.,toEnv)
+	ENDIF
+
+
 	SELECT Jurnal
 	ZAP
 	APPEND FROM DBF('JCump')
@@ -211,7 +216,7 @@ PROCEDURE _ProcessPurchases(toEnv As Object)
 	ENDIF
 	IF toEnv.oSettings.ModulTvaI
 		_CalculateVatOnCollectionPurchases(toEnv)
-		_Log("Calculul final pentru TVA la încasare (cumpărări) a fost efectuat.",.F.,toEnv)
+		_Log("Calculul final pentru TVA la încasare (cumparari) a fost efectuat.",.F.,toEnv)
 	ENDIF
 ENDPROC
 
@@ -363,24 +368,48 @@ PROCEDURE _ClassifyPurchases(toEnv As Object)
 ENDPROC
 
 PROCEDURE _ProcessMiscPurchasesFromRegister(toEnv As Object)
-	LOCAL lcSQL
+	LOCAL lcSQL, loEnv, lc_TvaC
 	loEnv = toEnv
 	TEXT TO lcSQL NOSHOW TEXTMERGE PRETEXT 15
-		SELECT R.Data, ISNULL(R.Data, R.Data) AS Data_Doc, R.Ndp, R.Suma, LTRIM(RTRIM(ISNULL(C.Denumire, ''))) + ' ' + LTRIM(RTRIM(ISNULL(R.Explicatie, ''))) AS Explicatie, R.ContC AS Cod_Tert, ISNULL(C.Cod_Fiscal, '') AS Cod_Fiscal, R.Fel_D, R.Id_Nota AS Id_Intrare
-		FROM Registru R WITH(NOLOCK) LEFT JOIN Conturi C WITH(NOLOCK) ON R.ContC = C.Cont LEFT JOIN (SELECT DISTINCT IdUnic FROM Intrari WITH(NOLOCK) WHERE ISNULL(Sters,0)=0 AND LEFT(NumarDoc,4)<>'Sold' UNION SELECT DISTINCT IdUnic FROM Import WITH(NOLOCK) WHERE ISNULL(Sters,0)=0 AND LEFT(NumarDoc,4)<>'Sold') AS Docs ON R.Id_Nota = Docs.IdUnic
-		WHERE R.ContD = ?loEnv.oConturi.TvaD AND R.Data BETWEEN ?loEnv.dData1 AND ?loEnv.dData2 AND UPPER(LEFT(R.Fel_D, 2)) <> 'TR' AND UPPER(LEFT(R.Fel_D, 3)) <> 'TVA' AND Docs.IdUnic IS NULL AND (?loEnv.nCategorii = 0 OR R.IdCategorie = ?loEnv.nCategorii)
+		Select
+			R.Data,
+			ISNULL(R.Data, R.Data) AS Data_Doc,
+			R.Ndp, R.Suma,
+			LTRIM(RTRIM(ISNULL(C.Denumire, ''))) + ' ' + LTRIM(RTRIM(ISNULL(R.Explicatie, ''))) AS Explicatie,
+			R.ContC AS Cod_Tert,
+			ISNULL(C.Cod_Fiscal, '') AS Cod_Fiscal,
+			R.Fel_D,
+			R.Id_Nota AS Id_Intrare,
+			Cast(0 As Numeric(12, 2)) As Baza_Tva_Calc,
+			Cast(0 As Numeric(12, 2)) As Cota_Tva_Calc,
+			Cast(0 As Numeric(2)) As ProcTva,
+			Cast('' As Char(8)) As CodTva
+		FROM Registru R WITH(NOLOCK)
+			LEFT JOIN Conturi C WITH(NOLOCK) ON R.ContC = C.Cont
+			LEFT JOIN (
+				SELECT DISTINCT IdUnic FROM Intrari WITH(NOLOCK) WHERE ISNULL(Sters,0)=0 AND LEFT(NumarDoc,4)<>'Sold'
+				UNION
+				SELECT DISTINCT IdUnic FROM Import WITH(NOLOCK) WHERE ISNULL(Sters,0)=0 AND LEFT(NumarDoc,4)<>'Sold'
+				)  AS Docs ON R.Id_Nota = Docs.IdUnic
+		WHERE
+			R.ContD = ?loEnv.oConturi.TvaD
+			AND R.Data BETWEEN ?loEnv.dData1 AND ?loEnv.dData2
+			AND UPPER(LEFT(R.Fel_D, 2)) <> 'TR'
+			AND UPPER(LEFT(R.Fel_D, 3)) <> 'TVA'
+			AND Docs.IdUnic IS NULL
+			AND (?loEnv.nCategorii = 0 OR R.IdCategorie = ?loEnv.nCategorii)
 	ENDTEXT
 	mySQLExec(lcSQL, "TmpSelRegTvaC")
 	SELECT TmpSelRegTvaC
-	ALTER TABLE TmpSelRegTvaC ADD COLUMN Baza_Tva_Calc N(12,2) ADD COLUMN Cota_Tva_Calc N(12,2) ADD COLUMN ProcTva N(5,2) ADD COLUMN CodTva C(8)
 	REPLACE ALL Baza_Tva_Calc WITH VAL(SUBSTR(Explicatie, AT('(', Explicatie)+1, AT(')', Explicatie)-AT('(', Explicatie)-1)) FOR '(' $ Explicatie
 	REPLACE ALL Baza_Tva_Calc WITH Suma*100/toEnv.nCotaStd+Suma FOR Baza_Tva_Calc=0
 	REPLACE ALL Cota_Tva_Calc WITH Suma/(Baza_Tva_Calc-Suma) FOR NVL(Baza_Tva_Calc, 0)<>0
 	REPLACE ALL ProcTva WITH toEnv.nCotaStd, CodTva WITH JCODE_C_STD
 	REPLACE ALL ProcTva WITH toEnv.nCotaRed1, CodTva WITH JCODE_C_RED1 FOR Cota_Tva_Calc > toEnv.nCotaRed2/100 AND Cota_Tva_Calc < toEnv.nCotaStd/100
 	REPLACE ALL ProcTva WITH toEnv.nCotaRed2, CodTva WITH JCODE_C_RED2 FOR Cota_Tva_Calc > 0 AND Cota_Tva_Calc <= toEnv.nCotaRed2/100
+	lc_TvaC = loEnv.oConturi.TvaC
 	INSERT INTO JCump (Data, Nr, Cod_Tert, Cod_Fisc, Denumire, Total, Baza_Tva, Tva, Cod, Tva_Art, CodTvaUser, Fel_D, Id_Intrare) ;
-		SELECT Data, Ndp, Cod_Tert, Cod_Fiscal, Explicatie, IIF(ProcTva<>0, Baza_Tva_Calc, Suma), IIF(ProcTva<>0, Baza_Tva_Calc-Suma, 0), Suma, IIF(Cod_Tert=toEnv.oConturi.TvaC, JCODE_C_AIC_BUNURI, CodTva), ProcTva, IIF(Cod_Tert=toEnv.oConturi.TvaC, JCODE_C_AIC_BUNURI, CodTva), Fel_D, Id_Intrare FROM TmpSelRegTvaC
+		SELECT Data, Ndp, Cod_Tert, Cod_Fiscal, Explicatie, IIF(ProcTva<>0, Baza_Tva_Calc, Suma), IIF(ProcTva<>0, Baza_Tva_Calc-Suma, 0), Suma, IIF(Cod_Tert=lc_TvaC, JCODE_C_AIC_BUNURI, CodTva), ProcTva, IIF(Cod_Tert=lc_TvaC, JCODE_C_AIC_BUNURI, CodTva), Fel_D, Id_Intrare FROM TmpSelRegTvaC
 ENDPROC
 
 PROCEDURE _CalculateVatOnCollectionPurchases(toEnv As Object)
