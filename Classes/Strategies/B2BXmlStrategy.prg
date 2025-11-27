@@ -22,10 +22,15 @@ Define Class B2BXmlStrategy As XmlGeneratorStrategy
 	* Parametri: 
 	*   toContext - Contextul procesarii
 	* Returneaza: String - Continutul XML
+	* Nota: Aceasta metoda returneaza empty deoarece generarea efectiva
+	*       a XML-ului este delegata catre XmlBuilderHandler. Strategia
+	*       furnizeaza doar logica specifica tipului de raportare (B2B/B2C/Export)
+	*       prin metodele GetTaxCategoryForLine si alte metode helper.
 	*---------------------------------------------------------------------------
 	Function Generate(toContext)
-		*-- Delegare la XmlBuilderHandler cu setari B2B
-		*-- Aceasta strategie poate fi extinsa pentru logica specifica B2B
+		*-- Generarea XML-ului este delegata catre XmlBuilderHandler
+		*-- Aceasta strategie furnizeaza doar logica specifica B2B
+		*-- (categorii TVA, validari, etc.) prin metodele helper
 		Return ""
 	EndFunc
 	

@@ -182,12 +182,18 @@ Define Class LoggerService As Custom
 	*---------------------------------------------------------------------------
 	* Procedura: AddToBuffer
 	* Descriere: Adauga mesajul in buffer
+	*            Nota: Buffer-ul foloseste o strategie FIFO simpla.
+	*            Pentru aplicatii cu logging intensiv, se recomanda
+	*            implementarea unui circular buffer.
 	* Parametri: 
 	*   tcMessage - Mesajul
 	*---------------------------------------------------------------------------
 	Protected Procedure AddToBuffer(tcMessage)
+		Local i
 		If This.nBufferCount >= This.nMaxBufferSize
-			*-- Shift buffer
+			*-- Shift buffer (FIFO) - elimina cel mai vechi mesaj
+			*-- Nota: O(n) complexity. Pentru performanta mai buna cu
+			*-- logging intensiv, se poate implementa un circular buffer
 			For i = 1 To This.nMaxBufferSize - 1
 				This.aLogBuffer[i] = This.aLogBuffer[i + 1]
 			EndFor

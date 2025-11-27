@@ -209,9 +209,11 @@ Define Class EFacturaFacade As Custom
 		toContext.cRecipisa = AllTrim(crsEFactura.Recipisa)
 		
 		*-- Determina tipul tertului
+		Local lcTipTert
+		lcTipTert = AllTrim(Iif(IsNull(crsEFactura.Tip_Tert) Or Empty(crsEFactura.Tip_Tert), '', crsEFactura.Tip_Tert))
 		toContext.cTipTert = ICase(;
-			IsNullOrEmpty(crsEFactura.Tip_Tert) Or InList(crsEFactura.Tip_Tert, '', '1'), '', ;
-			crsEFactura.Tip_Tert = '2', 'I', ;
+			Empty(lcTipTert) Or InList(lcTipTert, '', '1'), '', ;
+			lcTipTert = '2', 'I', ;
 			'E')
 		
 		*-- Determina modul TVA

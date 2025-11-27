@@ -337,7 +337,7 @@ Define Class ApiUploaderHandler As AbstractHandler
 			If loHttp.Status = 200
 				lcRaspuns = loHttp.ResponseText
 			Else
-				lcRaspuns = "_error:" + toHttp.StatusText
+				lcRaspuns = "_error:" + loHttp.StatusText
 			EndIf
 		Catch To loException
 			lcRaspuns = "_error:" + loException.Message

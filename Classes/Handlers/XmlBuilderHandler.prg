@@ -721,10 +721,11 @@ Define Class XmlBuilderHandler As AbstractHandler
 	*---------------------------------------------------------------------------
 	Protected Procedure GenerateItemTaxCategory(toItem, tnProcTva)
 		Local loTaxCategory, loTaxScheme, lcTip
+		Local Array aTaxCategoryResult[1]
 		
 		*-- Gaseste categoria TVA
-		Select Tip From crsTva_EFactura Where ProcTva = tnProcTva Into Array aGetTip
-		lcTip = Iif(_Tally > 0 And Not IsNull(aGetTip(1)), AllTrim(aGetTip(1)), "S")
+		Select Tip From crsTva_EFactura Where ProcTva = tnProcTva Into Array aTaxCategoryResult
+		lcTip = Iif(_Tally > 0 And Not IsNull(aTaxCategoryResult(1)), AllTrim(aTaxCategoryResult(1)), "S")
 		
 		loTaxCategory = toItem.AppendChild(This.oXml.CreateElement("cac:ClassifiedTaxCategory"))
 		

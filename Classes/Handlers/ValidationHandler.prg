@@ -326,7 +326,7 @@ Define Class ValidationHandler As AbstractHandler
 		EndIf
 		
 		*-- Verifica daca e numeric
-		If Not IsDigit(lcCF)
+		If Not This.IsDigit(lcCF)
 			Return .F.
 		EndIf
 		
