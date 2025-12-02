@@ -267,6 +267,7 @@ vicosx12@gmail.com
 - **v2.0** (11/2024) - Refactorizare OOP completă
 - **v2.1** (12/2024) - Servicii avansate: DI Container, Events, Cache, Async
 - **v2.2** (12/2024) - Health Check, Audit, Notifications, Rate Limiter, Batch Processing, Config Hot Reload, Metrics, PDF Generator, Multi-tenancy, Plugin Architecture
+- **v2.3** (12/2024) - Saga Pattern, Feature Flags, Encryption, Webhooks, Query Builder, State Machine, Localization, Backup/Recovery, API Gateway, Distributed Tracing, Schema Migration, Report Templates
 
 ---
 
@@ -817,3 +818,408 @@ EndDefine
 | `OnShutdown` | La închiderea aplicației |
 | `OnError` | La apariția unei erori |
 | `OnConfigChange` | La modificarea configurației |
+
+---
+
+## Servicii Avansate (v2.3)
+
+### SagaOrchestrator - Orchestrare Fluxuri Multi-Step
+
+```foxpro
+*-- Creează saga
+loSaga = CreateObject("SagaOrchestrator")
+loSaga.SetLogger(loLogger)
+
+*-- Definește saga pentru upload factură
+loSaga.BeginSaga("InvoiceUpload_" + Transform(lnId))
+loSaga.AddStep("Validate", "DoValidate", "")
+loSaga.AddStep("GenerateXml", "DoGenerateXml", "DoDeleteXml")
+loSaga.AddStep("Upload", "DoUpload", "DoCancelUpload")
+loSaga.AddStep("SaveReceipt", "DoSaveReceipt", "DoDeleteReceipt")
+
+*-- Execută cu compensare automată la eșec
+loSaga.SetExecutor(loInvoiceProcessor)
+llSuccess = loSaga.Execute(toContext)
+
+*-- Raport execuție
+? loSaga.GetReport()
+```
+
+### FeatureFlagService - Feature Flags
+
+```foxpro
+*-- Creează serviciul
+loFlags = CreateObject("FeatureFlagService")
+
+*-- Definește flag-uri
+loFlags.DefineFlag("NewXmlFormat", .F., "Folosește noul format XML")
+loFlags.DefineFlag("ParallelUpload", .T., "Upload în paralel")
+loFlags.DefineFlag("ApiTimeout", 30, "Timeout pentru API")
+
+*-- Condiții temporale
+loFlags.SetDateRange("BetaFeature", {^2024-01-01}, {^2024-06-30})
+
+*-- Restricții per tenant/user
+loFlags.SetTenants("NewXmlFormat", "TENANT1,TENANT2")
+loFlags.SetUsers("DebugMode", "admin,developer")
+
+*-- Verifică flag
+If loFlags.IsEnabled("NewXmlFormat")
+    * Folosește noul format
+EndIf
+
+*-- Obține valoare
+lnTimeout = loFlags.GetValue("ApiTimeout", 30)
+
+*-- Override pentru dezvoltare
+loFlags.SetOverride("NewXmlFormat", .T.)
+```
+
+### EncryptionService - Criptare Date Sensibile
+
+```foxpro
+*-- Creează serviciul
+loEncrypt = CreateObject("EncryptionService")
+loEncrypt.SetMasterKey("MySecretPassword123")
+
+*-- Criptare/Decriptare string
+lcEncrypted = loEncrypt.Encrypt("CUI: RO12345678")
+lcDecrypted = loEncrypt.Decrypt(lcEncrypted)
+
+*-- Hash pentru verificări integritate
+lcHash = loEncrypt.Hash(lcXmlContent)
+llValid = loEncrypt.VerifyHash(lcXmlContent, lcHash)
+
+*-- Criptare fișier
+loEncrypt.EncryptFile("factura.xml", "factura.enc")
+loEncrypt.DecryptFile("factura.enc", "factura_decrypted.xml")
+
+*-- Rotație cheie
+loEncrypt.RotateKey("NewPassword456")
+
+*-- Token securizat
+lcToken = loEncrypt.GenerateSecureToken(32)
+```
+
+### WebhookManager - Webhook-uri
+
+```foxpro
+*-- Creează manager
+loWebhook = CreateObject("WebhookManager")
+
+*-- Înregistrează endpoint
+loWebhook.RegisterEndpoint("AnafNotify", "https://myapp.com/webhook/anaf", "secret123")
+loWebhook.RegisterEndpoint("ERPSync", "https://erp.com/api/invoice", "")
+
+*-- Trimite webhook
+loWebhook.Send("AnafNotify", lcPayloadJson)
+
+*-- Adaugă la coadă pentru trimitere async
+loWebhook.QueueSend("ERPSync", lcPayloadJson)
+loWebhook.ProcessQueue()
+
+*-- Handler pentru incoming webhooks
+loWebhook.RegisterHandler("invoice.uploaded", loMyHandler)
+loWebhook.ProcessIncoming("invoice.uploaded", lcPayload, lcSignature, lcTimestamp, "secret")
+```
+
+### QueryBuilder - Interogări Flexibile
+
+```foxpro
+*-- Creează query builder
+loQuery = CreateObject("QueryBuilder")
+
+*-- Query fluent
+loQuery.From("Iesiri") ;
+       .Select("IdIesire, NumarDoc, DataDoc, ValoareTotala") ;
+       .Where("DataDoc", ">=", Date() - 30) ;
+       .Where("Stare", "=", "A") ;
+       .OrderBy("DataDoc", "DESC") ;
+       .Limit(100)
+
+*-- Obține SQL
+lcSql = loQuery.ToSql()
+
+*-- Execută
+loQuery.Execute("rezultat")
+Browse
+
+*-- Paginare
+loQuery.Paginate(2, 25, "rezultat")  && Pagina 2, 25 per pagină
+
+*-- Agregări
+loQuery.From("Iesiri").Count("*", "total").GroupBy("TipDoc")
+loQuery.Execute()
+```
+
+### InvoiceStateMachine - State Machine
+
+```foxpro
+*-- Creează state machine
+loSM = CreateObject("InvoiceStateMachine")
+loSM.Initialize("DRAFT")
+
+*-- Verifică tranziții posibile
+laTransitions = loSM.GetPossibleTransitions()
+
+*-- Efectuează tranziție
+If loSM.CanTransitionTo("VALIDATED")
+    loSM.TransitionTo("VALIDATED", "user123")
+EndIf
+
+*-- Verifică starea curentă
+? loSM.GetCurrentState()  && "VALIDATED"
+? loSM.IsInState("DRAFT")  && .F.
+? loSM.IsInFinalState()    && .F.
+
+*-- Rollback
+loSM.Rollback()
+
+*-- Istoric
+laHistory = loSM.GetHistory()
+
+*-- Diagramă text
+? loSM.GetDiagram()
+```
+
+### LocalizationService - Multi-limbă
+
+```foxpro
+*-- Creează serviciul
+loLoc = CreateObject("LocalizationService")
+
+*-- Schimbă limba
+loLoc.SetLocale("EN")
+
+*-- Traduce
+lcMsg = loLoc.Translate("invoice.created", "invoiceNumber", "123")
+* Result: "Invoice 123 has been created"
+
+*-- Shortcut
+lcMsg = loLoc.T("error.network")
+
+*-- Pluralizare
+lcMsg = loLoc.TranslatePlural("invoice.count", 5)
+* Result: "5 invoices"
+
+*-- Formatare locale-specific
+? loLoc.FormatDate(Date())        && "12/02/2024" (EN) sau "02.12.2024" (RO)
+? loLoc.FormatNumber(12345.67, 2) && "12,345.67" (EN)
+? loLoc.FormatNumber(12345.67, 2, .T.)  && "12,345.67 RON"
+
+*-- Încarcă traduceri din fișier
+loLoc.LoadFromFile("translations.json")
+```
+
+### BackupService - Backup și Recovery
+
+```foxpro
+*-- Creează serviciul
+loBackup = CreateObject("BackupService")
+loBackup.SetBackupPath("D:\Backups\eFactura")
+
+*-- Backup XML-uri
+loBackup.BackupXmlFiles("C:\eFactura\XML\", "XML")
+
+*-- Backup bază de date
+loBackup.BackupDatabase("IESIRI")
+
+*-- Backup complet
+loBackup.BackupFull("C:\eFactura\")
+
+*-- Restore
+loBackup.RestoreFromBackup("D:\Backups\eFactura\FULL_20241202_143000.zip", "C:\Restore\")
+
+*-- Programare automată
+loBackup.Schedule("DAILY", "02:00", "")
+loBackup.Schedule("WEEKLY", "03:00", "1,7")  && Duminică și Luni
+
+*-- Curățare backup-uri vechi
+loBackup.CleanupOldBackups()  && Șterge backup-uri mai vechi de 30 zile
+
+*-- Statistici
+loStats = loBackup.GetStats()
+? "Success rate: " + Transform(loStats.SuccessRate) + "%"
+```
+
+### ApiGateway - Gateway API
+
+```foxpro
+*-- Creează gateway
+loGateway = CreateObject("ApiGateway")
+
+*-- Înregistrează rute
+loGateway.RegisterRoute("/invoice/*", "InvoiceHandler", "GET,POST", .T., 100)
+loGateway.RegisterRoute("/status/*", "StatusHandler", "GET", .F., 200)
+
+*-- Procesează request
+lcResponse = loGateway.HandleRequest("GET", "/invoice/123", "", "", "client1")
+
+*-- Rate limiting
+loGateway.nDefaultRateLimit = 100  && 100 requests/minut
+
+*-- Cache
+loGateway.lCacheEnabled = .T.
+loGateway.nDefaultCacheTTL = 60
+
+*-- Statistici
+loStats = loGateway.GetStats()
+? "Cache hit rate: " + Transform(loStats.CacheHitRate) + "%"
+```
+
+### DistributedTracer - Distributed Tracing
+
+```foxpro
+*-- Creează tracer
+loTracer = CreateObject("DistributedTracer")
+loTracer.SetService("eFactura", "2.3")
+
+*-- Începe trace
+loSpan = loTracer.StartTrace("ProcessInvoice")
+loSpan.SetTag("invoice.id", "123")
+loSpan.SetTag("invoice.type", "B2B")
+
+*-- Child span
+loChildSpan = loSpan.StartChildSpan("GenerateXML")
+* ... procesare ...
+loChildSpan.Finish()
+
+*-- Altul
+loUploadSpan = loSpan.StartChildSpan("UploadToANAF")
+loUploadSpan.SetTag("api.endpoint", "/upload")
+loUploadSpan.Finish()
+
+*-- Finalizează
+loSpan.Finish()
+
+*-- Export spans (pentru Jaeger/Zipkin)
+lcJson = loTracer.ExportSpans()
+
+*-- Context propagation
+lcHeaders = loTracer.GetTraceContext()
+```
+
+### SchemaMigrator - Migrare Schemă BD
+
+```foxpro
+*-- Creează migrator
+loMigrator = CreateObject("SchemaMigrator")
+loMigrator.SetDatabasePath("C:\Data\")
+loMigrator.SetMigrationsPath("C:\Migrations\")
+
+*-- Înregistrează migrări
+loMigrator.RegisterMigration("001", "CreateAuditTable")
+loMigrator.RegisterMigration("002", "AddEfacturaFields")
+loMigrator.RegisterMigration("003", "CreateCacheTable")
+
+*-- Rulează toate migrările pending
+loMigrator.Migrate()
+
+*-- Rollback ultima migrare
+loMigrator.Rollback()
+
+*-- Status
+? loMigrator.GetStatus()
+
+*-- Creează o migrare nouă
+loMigrator.CreateMigration("AddNewColumn")  && Generează fișier template
+```
+
+### ReportTemplateEngine - Șabloane Rapoarte
+
+```foxpro
+*-- Creează engine
+loEngine = CreateObject("ReportTemplateEngine")
+loEngine.SetTemplatesPath("C:\Templates\")
+
+*-- Încarcă template
+loEngine.LoadTemplate("invoice_report.html")
+
+*-- Setează date
+loEngine.SetData("company", loCompany)
+loEngine.SetData("invoice", loInvoice)
+loEngine.SetData("lines", @laLines)
+
+*-- Renderizează
+lcOutput = loEngine.Render()
+
+*-- Salvează
+loEngine.SaveToFile("raport.html", lcOutput)
+
+*-- Template syntax:
+* {{variableName}} - Variabilă simplă
+* {{object.property}} - Proprietate obiect
+* {{#each lines}}...{{/each}} - Loop
+* {{#if condition}}...{{else}}...{{/if}} - Condiție
+* {{variableName|filter}} - Filtru (upper, lower, date, number, currency)
+* {{> partialName}} - Include parțial
+```
+
+## Arhitectura Completă v2.3
+
+```
+/Classes/
+├── /Core/
+│   ├── EFacturaContext.prg
+│   ├── EFacturaFacade.prg
+│   ├── ConfigProvider.prg
+│   ├── ServiceContainer.prg
+│   ├── TenantManager.prg
+│   └── PluginManager.prg
+├── /Handlers/
+│   ├── AbstractHandler.prg
+│   ├── ValidationHandler.prg
+│   ├── TaxCalculationHandler.prg
+│   ├── XmlBuilderHandler.prg
+│   ├── ApiUploaderHandler.prg
+│   └── PersistenceHandler.prg
+├── /Repositories/
+│   ├── IInvoiceRepository.prg
+│   ├── IesiriRepository.prg
+│   ├── ExportRepository.prg
+│   └── RepositoryFactory.prg
+├── /Strategies/
+│   ├── XmlGeneratorStrategy.prg
+│   ├── B2BXmlStrategy.prg
+│   ├── ExportXmlStrategy.prg
+│   └── XmlStrategyFactory.prg
+├── /Builders/
+│   ├── HandlerChainBuilder.prg
+│   └── InvoiceBuilder.prg
+├── /Observers/
+│   ├── ProgressSubject.prg
+│   └── ProgressBarObserver.prg
+├── /Domain/
+│   ├── Invoice.prg
+│   └── InvoiceLine.prg
+└── /Services/
+    ├── LoggerService.prg
+    ├── StatsCollector.prg
+    ├── CacheService.prg
+    ├── RetryPolicy.prg
+    ├── EventDispatcher.prg
+    ├── XmlSchemaValidator.prg
+    ├── UnitOfWork.prg
+    ├── MessageQueue.prg
+    ├── AsyncProcessor.prg
+    ├── HealthChecker.prg
+    ├── AuditService.prg
+    ├── NotificationService.prg
+    ├── RateLimiter.prg
+    ├── BatchProcessor.prg
+    ├── ConfigHotReload.prg
+    ├── MetricsCollector.prg
+    ├── PdfGenerator.prg
+    ├── SagaOrchestrator.prg        # NEW v2.3
+    ├── FeatureFlagService.prg      # NEW v2.3
+    ├── EncryptionService.prg       # NEW v2.3
+    ├── WebhookManager.prg          # NEW v2.3
+    ├── QueryBuilder.prg            # NEW v2.3
+    ├── InvoiceStateMachine.prg     # NEW v2.3
+    ├── LocalizationService.prg     # NEW v2.3
+    ├── BackupService.prg           # NEW v2.3
+    ├── ApiGateway.prg              # NEW v2.3
+    ├── DistributedTracer.prg       # NEW v2.3
+    ├── SchemaMigrator.prg          # NEW v2.3
+    └── ReportTemplateEngine.prg    # NEW v2.3
+```
