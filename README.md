@@ -268,6 +268,7 @@ vicosx12@gmail.com
 - **v2.1** (12/2024) - Servicii avansate: DI Container, Events, Cache, Async
 - **v2.2** (12/2024) - Health Check, Audit, Notifications, Rate Limiter, Batch Processing, Config Hot Reload, Metrics, PDF Generator, Multi-tenancy, Plugin Architecture
 - **v2.3** (12/2024) - Saga Pattern, Feature Flags, Encryption, Webhooks, Query Builder, State Machine, Localization, Backup/Recovery, API Gateway, Distributed Tracing, Schema Migration, Report Templates
+- **v2.4** (12/2024) - Enterprise Patterns: CQRS, Event Sourcing, Specification Pattern, Decorator Pattern, Mediator Pattern, Domain Events, Idempotency Service, Outbox Pattern, Compensation Service, Policy-Based Authorization, Read Replica Support, Bulk Operations Pipeline
 
 ---
 
@@ -1221,5 +1222,281 @@ loEngine.SaveToFile("raport.html", lcOutput)
     ├── ApiGateway.prg              # NEW v2.3
     ├── DistributedTracer.prg       # NEW v2.3
     ├── SchemaMigrator.prg          # NEW v2.3
-    └── ReportTemplateEngine.prg    # NEW v2.3
+    ├── ReportTemplateEngine.prg    # NEW v2.3
+    ├── CQRSService.prg             # NEW v2.4
+    ├── EventSourcingService.prg    # NEW v2.4
+    ├── SpecificationPattern.prg    # NEW v2.4
+    ├── DecoratorPattern.prg        # NEW v2.4
+    ├── MediatorPattern.prg         # NEW v2.4
+    ├── DomainEvents.prg            # NEW v2.4
+    ├── IdempotencyService.prg      # NEW v2.4
+    ├── OutboxPattern.prg           # NEW v2.4
+    ├── CompensationService.prg     # NEW v2.4
+    ├── AuthorizationService.prg    # NEW v2.4
+    ├── ReadReplicaService.prg      # NEW v2.4
+    └── BulkOperationsPipeline.prg  # NEW v2.4
+```
+
+## Enterprise Patterns (v2.4)
+
+### CQRS (Command Query Responsibility Segregation)
+
+```foxpro
+*-- Creează CQRS Bus
+loBus = CreateObject("CQRSBus")
+
+*-- Înregistrează handlers
+loBus.RegisterCommandHandler("CreateInvoice", CreateObject("CreateInvoiceCommandHandler"))
+loBus.RegisterCommandHandler("UploadInvoice", CreateObject("UploadInvoiceCommandHandler"))
+loBus.RegisterQueryHandler("GetInvoiceById", CreateObject("GetInvoiceByIdQueryHandler"))
+loBus.RegisterQueryHandler("GetInvoicesList", CreateObject("GetInvoicesListQueryHandler"))
+
+*-- Dispatch command
+loCommand = CreateObject("CreateInvoiceCommand")
+loCommand.cNumar = "FAC-001"
+loCommand.dData = Date()
+loCommand.cCIF_Vanzator = "RO12345678"
+loCommand.cCIF_Cumparator = "RO87654321"
+loCommand.nValoareTotala = 1000.00
+
+loResult = loBus.DispatchCommand(loCommand)
+If loResult.lSuccess
+    ? "Invoice created: " + Transform(loResult.nInvoiceId)
+EndIf
+
+*-- Dispatch query
+loQuery = CreateObject("GetInvoicesListQuery")
+loQuery.cCIF = "RO12345678"
+loQuery.dDataStart = Date() - 30
+loQuery.nPageSize = 50
+
+loInvoices = loBus.DispatchQuery(loQuery)
+```
+
+### Event Sourcing
+
+```foxpro
+*-- Creează event store și repository
+loEventStore = CreateObject("EventStore")
+loRepo = CreateObject("AggregateRepository")
+loRepo.oEventStore = loEventStore
+
+*-- Creează invoice aggregate
+loInvoice = CreateObject("InvoiceAggregate")
+loInvoice.cAggregateId = "INV-001"
+loInvoice.Create("FAC-2024-001", Date(), "RO12345678", "RO87654321", 1000, 190, "RON")
+loInvoice.Validate(.T., "OK")
+loInvoice.Upload("ABC123", "{}", .F.)
+
+*-- Salvează (persista evenimentele)
+loRepo.Save(loInvoice)
+
+*-- Încarcă din istoric (replay events)
+loLoadedInvoice = loRepo.Load("INV-001", "Invoice")
+? loLoadedInvoice.cStatus  && "UPLOADED"
+? loLoadedInvoice.nVersion && 3 (3 evenimente)
+```
+
+### Specification Pattern
+
+```foxpro
+*-- Creează specificații
+loValidCIF = CreateObject("HasValidCIFSpecification", "cCIF_Vanzator")
+loRequiredFields = CreateObject("HasRequiredFieldsSpecification")
+loRequiredFields.AddRequiredField("cNumar")
+loRequiredFields.AddRequiredField("dData")
+
+*-- Combină cu And/Or/Not
+loSpec = loRequiredFields.And(loValidCIF)
+
+*-- Validează
+loInvoice = CreateObject("Empty")
+AddProperty(loInvoice, "cNumar", "FAC-001")
+AddProperty(loInvoice, "dData", Date())
+AddProperty(loInvoice, "cCIF_Vanzator", "RO12345678")
+
+If loSpec.IsSatisfiedBy(loInvoice)
+    ? "Invoice is valid"
+Else
+    ? loSpec.GetFailureReason(loInvoice)
+EndIf
+
+*-- Factory pentru specificații comune
+loFactory = CreateObject("InvoiceSpecificationFactory")
+loStandardSpec = loFactory.CreateStandardInvoiceSpec()
+loExportSpec = loFactory.CreateExportInvoiceSpec()
+```
+
+### Decorator Pattern
+
+```foxpro
+*-- Creează handler de bază
+loHandler = CreateObject("ValidationHandler")
+
+*-- Decorează cu logging, timing, retry
+loBuilder = CreateObject("DecoratorBuilder", loHandler)
+loDecorated = loBuilder ;
+    .WithLogging(loLogger) ;
+    .WithTiming(loMetrics) ;
+    .WithRetry(3) ;
+    .WithCircuitBreaker(5, 60) ;
+    .Build()
+
+*-- Folosește handler-ul decorat
+loDecorated.Handle(loContext)
+```
+
+### Mediator Pattern
+
+```foxpro
+*-- Creează mediator
+loMediator = CreateObject("Mediator")
+
+*-- Adaugă behaviors
+loMediator.AddBehavior(CreateObject("LoggingBehavior"))
+loMediator.AddBehavior(CreateObject("ValidationBehavior"))
+loMediator.AddBehavior(CreateObject("PerformanceBehavior"))
+
+*-- Înregistrează handlers
+loMediator.RegisterHandler("ProcessInvoice", CreateObject("ProcessInvoiceHandler"))
+
+*-- Trimite request
+loRequest = CreateObject("ProcessInvoiceRequest")
+loRequest.nInvoiceId = 123
+
+loResponse = loMediator.Send(loRequest)
+
+*-- Publică notificare
+loNotification = CreateObject("InvoiceProcessedNotification")
+loNotification.nInvoiceId = 123
+loNotification.lSuccess = .T.
+loMediator.Publish(loNotification)
+```
+
+### Idempotency Service
+
+```foxpro
+*-- Creează serviciul
+loIdempotency = CreateObject("IdempotencyService")
+
+*-- Verifică dacă request-ul a fost procesat
+lcKey = loIdempotency.GenerateKey(loRequest)
+loCheck = loIdempotency.CheckIdempotency(lcKey, "")
+
+If loCheck.lHasResponse
+    * Returnează răspunsul cached
+    Return loCheck.cResponse
+EndIf
+
+If loCheck.lCanProceed
+    loIdempotency.StartProcessing(lcKey, "")
+    Try
+        * Procesează request
+        lcResult = ProcessInvoice(loRequest)
+        loIdempotency.CompleteProcessing(lcKey, lcResult)
+    Catch To loEx
+        loIdempotency.MarkFailed(lcKey, loEx.Message)
+    EndTry
+EndIf
+```
+
+### Outbox Pattern
+
+```foxpro
+*-- Creează outbox store și processor
+loOutbox = CreateObject("OutboxStore")
+loProcessor = CreateObject("OutboxProcessor")
+
+*-- Înregistrează sender
+loProcessor.RegisterSender("webhook", CreateObject("HttpMessageSender", "https://api.example.com"))
+
+*-- Adaugă mesaj în outbox
+loMessage = CreateObject("OutboxMessage")
+loMessage.cMessageType = "InvoiceUploaded"
+loMessage.cAggregateId = "123"
+loMessage.cPayload = '{"invoiceId": 123, "status": "uploaded"}'
+loMessage.cDestination = "webhook"
+
+loOutbox.Add(loMessage)
+
+*-- Procesează coada (în background)
+loProcessor.ProcessBatch()
+```
+
+### Policy-Based Authorization
+
+```foxpro
+*-- Creează serviciul de autorizare
+loAuth = CreateObject("AuthorizationService")
+
+*-- Înregistrează permisiuni pentru roluri
+loAuth.RegisterRolePermissions("Admin", "invoice.view,invoice.create,invoice.upload,invoice.delete")
+loAuth.RegisterRolePermissions("User", "invoice.view,invoice.create")
+loAuth.RegisterRolePermissions("Viewer", "invoice.view")
+
+*-- Creează context
+loContext = CreateObject("AuthorizationContext")
+loContext.cUserId = "user1"
+loContext.oRoles.Add("User")
+loContext.cResource = "Invoice"
+loContext.cAction = "CREATE"
+
+*-- Verifică autorizare
+loResult = loAuth.AuthorizePermission("invoice.create", loContext)
+If loResult.lAuthorized
+    * Permite acțiunea
+Else
+    ? "Access denied: " + loResult.cReason
+EndIf
+
+*-- Sau folosește policy
+loResult = loAuth.AuthorizePolicy("ResourceOwner", loContext)
+```
+
+### Read Replica Support
+
+```foxpro
+*-- Creează manager replici
+loReplica = CreateObject("ReadReplicaManager")
+loReplica.SetPrimary(loPrimaryConnection)
+loReplica.AddReplica(loReplicaConnection1, "replica1")
+loReplica.AddReplica(loReplicaConnection2, "replica2")
+loReplica.cLoadBalanceStrategy = "LEAST_CONNECTIONS"
+
+*-- Obține conexiune pentru read
+loReadConn = loReplica.GetReadConnection()
+* ... execută query ...
+loReplica.ReleaseReadConnection(loReadConn)
+
+*-- Obține conexiune pentru write (întotdeauna primary)
+loWriteConn = loReplica.GetWriteConnection()
+
+*-- Health check
+loReplica.CheckHealth()
+loStats = loReplica.GetStats()
+? "Healthy replicas: " + Transform(loStats.nHealthyReplicas)
+```
+
+### Bulk Operations Pipeline
+
+```foxpro
+*-- Creează builder pentru bulk operation
+loBuilder = CreateObject("BulkOperationBuilder")
+
+*-- Configurează și execută
+loResult = loBuilder ;
+    .WithOperationType("UploadInvoices") ;
+    .WithItems(loInvoiceCollection) ;
+    .WithBatchSize(50) ;
+    .WithMaxRetries(3) ;
+    .WithProcessor(CreateObject("InvoiceBulkProcessor")) ;
+    .WithLogger(loLogger) ;
+    .WithProgress(loProgressSubject) ;
+    .Execute()
+
+*-- Verifică rezultat
+? "Processed: " + Transform(loResult.nProcessedItems)
+? "Success: " + Transform(loResult.nSuccessCount)
+? "Failed: " + Transform(loResult.nFailedCount)
+? "Duration: " + Transform(loResult.GetDuration()) + " seconds"
 ```
