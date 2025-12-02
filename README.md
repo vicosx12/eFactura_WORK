@@ -266,6 +266,7 @@ vicosx12@gmail.com
 - **v1.2** (01/2024) - Suport B2C, optimizări
 - **v2.0** (11/2024) - Refactorizare OOP completă
 - **v2.1** (12/2024) - Servicii avansate: DI Container, Events, Cache, Async
+- **v2.2** (12/2024) - Health Check, Audit, Notifications, Rate Limiter, Batch Processing, Config Hot Reload, Metrics, PDF Generator, Multi-tenancy, Plugin Architecture
 
 ---
 
@@ -465,3 +466,354 @@ Do Tests\Test_ApiMock
 *-- Teste performanță
 Do Tests\Test_Performance
 ```
+
+---
+
+## Servicii Extinse (v2.2)
+
+### HealthChecker - Diagnosticare Sistem
+
+```foxpro
+*-- Creează health checker
+loHealth = CreateObject("HealthChecker")
+
+*-- Rulează toate verificările
+loReport = loHealth.RunAllChecks()
+
+? "Status general: " + loReport.OverallStatus
+? "Healthy: " + Transform(loReport.HealthyCount)
+? "Warning: " + Transform(loReport.WarningCount)
+? "Critical: " + Transform(loReport.CriticalCount)
+
+*-- Verificare rapidă
+If loHealth.IsHealthy()
+    ? "Sistemul este sănătos"
+EndIf
+
+*-- Export JSON (pentru dashboard-uri externe)
+lcJson = loHealth.GetReportAsJson()
+```
+
+### AuditService - Audit Trail
+
+```foxpro
+*-- Creează serviciul de audit
+loAudit = CreateObject("AuditService")
+loAudit.SetUser("user1", "Ion Popescu")
+
+*-- Logare acțiuni
+loAudit.LogCreate("Invoice", 12345, "Factură nouă creată", lcInvoiceData)
+loAudit.LogUpdate("Invoice", 12345, "Status actualizat", "DRAFT", "SENT")
+loAudit.LogUpload("Invoice", 12345, "Încărcat ANAF", lcResponse)
+loAudit.LogError("Invoice", 12345, "Eroare validare", lcErrorDetails)
+
+*-- Interogare istoric
+loAudit.Query("Invoice", "12345", Date() - 30, Date(), "")
+Browse
+Use In AuditResults
+
+*-- Export istoric la JSON
+lcHistoryJson = loAudit.ExportToJson("Invoice", "12345", Date() - 7, Date())
+
+*-- Cleanup vechi (după 365 zile implicit)
+lnDeleted = loAudit.Cleanup()
+```
+
+### NotificationService - Notificări Email/SMS
+
+```foxpro
+*-- Creează serviciul
+loNotify = CreateObject("NotificationService")
+
+*-- Configurare SMTP
+loNotify.cSmtpServer = "smtp.example.com"
+loNotify.nSmtpPort = 587
+loNotify.cSmtpUser = "user@example.com"
+loNotify.cSmtpPassword = "password"
+loNotify.cFromEmail = "noreply@example.com"
+
+*-- Adaugă destinatari
+loNotify.AddEmailRecipient("admin@company.ro", "Administrator")
+loNotify.AddSmsRecipient("+40712345678")
+
+*-- Trimite notificări
+loNotify.NotifyError("Eroare critică API", "Conexiune ANAF eșuată", .T.)  && Urgent
+loNotify.NotifySuccess("Upload reușit", "Factură #123 trimisă cu succes")
+loNotify.NotifyWarning("Atenție", "Spațiu disk scăzut")
+
+*-- Notificare rezultat batch
+loNotify.NotifyBatchResult(100, 95, 5, 45.5)  && Total, Success, Failed, Duration
+
+*-- Notificare upload
+loNotify.NotifyUploadConfirmation("FAC-2024-001", "ABC123XYZ", "OK")
+```
+
+### RateLimiter - Protecție API
+
+```foxpro
+*-- Creează rate limiter
+loLimiter = CreateObject("RateLimiter")
+
+*-- Configurare endpoint-uri
+loLimiter.SetEndpointLimit("upload", 60, 60)    && 60 req/min
+loLimiter.SetEndpointLimit("status", 120, 60)   && 120 req/min
+
+*-- Verificare înainte de request
+If loLimiter.CanMakeRequest("upload")
+    * Face request
+    loLimiter.RecordRequest("upload")
+Else
+    * Așteaptă sau răspunde cu eroare
+EndIf
+
+*-- Sau atomic: verifică + înregistrează
+If loLimiter.AcquirePermit("upload")
+    * Face request
+EndIf
+
+*-- Așteaptă până se poate (cu timeout)
+If loLimiter.WaitForPermit("upload", 30)  && Max 30 secunde
+    * Face request
+Else
+    * Timeout
+EndIf
+
+*-- Status
+loStatus = loLimiter.GetStatus()
+? "Tokens: " + Transform(loStatus.Tokens) + "/" + Transform(loStatus.MaxTokens)
+
+*-- Request-uri rămase pentru endpoint
+? loLimiter.GetRemainingRequests("upload")
+```
+
+### BatchProcessor - Procesare CSV/Bulk
+
+```foxpro
+*-- Creează procesor batch
+loBatch = CreateObject("BatchProcessor")
+loBatch.SetFacade(loFacade)
+
+*-- Import din CSV
+loBatch.ImportFromCsv("facturi_ianuarie.csv")
+
+*-- Procesare
+loBatch.ProcessBatch()
+
+*-- Sau procesare după ID-uri
+loBatch.ProcessByIds("101,102,103,104", "Iesiri")
+
+*-- Sau procesare interval date
+loBatch.ProcessByDateRange(Date() - 30, Date(), "Iesiri")
+
+*-- Export rezultate la CSV
+lcCsvFile = loBatch.ExportResultsToCsv("rezultate.csv")
+
+*-- Raport text
+? loBatch.GetSummaryReportAsText()
+
+*-- Retry failed
+loBatch.RetryFailed("Iesiri")
+
+*-- Statistici
+loReport = loBatch.GetSummaryReport()
+? "Total: " + Transform(loReport.TotalRecords)
+? "Success: " + Transform(loReport.SuccessCount)
+? "Failed: " + Transform(loReport.FailedCount)
+? "Success Rate: " + Transform(loReport.SuccessRate) + "%"
+```
+
+### ConfigHotReload - Reîncărcare Configurație
+
+```foxpro
+*-- Creează serviciul
+loConfigReload = CreateObject("ConfigHotReload")
+loConfigReload.SetConfigFile("efactura.config")
+
+*-- Pornește monitorizarea
+loConfigReload.StartWatching()
+
+*-- Observer pentru schimbări
+Define Class MyConfigObserver As ConfigChangeObserver
+    Procedure OnConfigChanged(toConfigService)
+        ? "Configurație reîncărcată la " + Time()
+        * Reîncarcă setările în aplicație
+    EndProc
+EndDefine
+
+loObserver = CreateObject("MyConfigObserver")
+loConfigReload.AttachObserver(loObserver)
+
+*-- Poll manual (apelat din timer)
+loConfigReload.Poll()
+
+*-- Get/Set valori
+lcValue = loConfigReload.GetValue("ApiUrl", "https://default.url")
+loConfigReload.SetValue("DebugMode", "true")
+
+*-- Salvează configurația
+loConfigReload.SaveConfiguration()
+
+*-- Forțează reload
+loConfigReload.Reload()
+
+*-- Oprește monitorizarea
+loConfigReload.StopWatching()
+```
+
+### MetricsCollector - Dashboard și Metrici
+
+```foxpro
+*-- Creează colector
+loMetrics = CreateObject("MetricsCollector")
+
+*-- Contoare
+loMetrics.CounterInc("invoices_processed_total")
+loMetrics.CounterInc("invoices_uploaded_total")
+loMetrics.CounterInc("api_requests_total", 1, 'endpoint="upload"')
+
+*-- Gauge-uri
+loMetrics.GaugeSet("invoices_pending", 45)
+loMetrics.GaugeInc("queue_depth", 1)
+loMetrics.GaugeDec("cache_size", 10)
+
+*-- Histograme (durată)
+loTimer = loMetrics.Timer()
+* ... procesare ...
+lnDuration = loTimer.ObserveDuration("invoice_processing_duration_seconds")
+
+*-- Export format Prometheus
+lcPrometheusOutput = loMetrics.ExportPrometheus()
+
+*-- Date pentru dashboard
+loData = loMetrics.GetDashboardData()
+? "Procesate: " + Transform(loData.InvoicesProcessed)
+? "Uploadate: " + Transform(loData.InvoicesUploaded)
+? "Eșuate: " + Transform(loData.InvoicesFailed)
+? "Rată succes: " + Transform(loData.SuccessRate) + "%"
+? "Timp mediu: " + Transform(loData.AvgProcessingTime) + " sec"
+```
+
+### PdfGenerator - Generare PDF din XML
+
+```foxpro
+*-- Creează generator
+loPdf = CreateObject("PdfGenerator")
+
+*-- Generare din conținut XML
+lcXmlContent = FileToStr("factura.xml")
+lcPdfFile = loPdf.GenerateFromXml(lcXmlContent, "factura_output.pdf")
+
+*-- Sau din fișier
+lcPdfFile = loPdf.GenerateFromFile("factura.xml", "")
+
+*-- Preview în browser
+loPdf.PreviewInvoice(lcXmlContent)
+
+*-- Doar HTML (pentru conversie externă)
+lcHtml = loPdf.GenerateHtml(loInvoice)
+```
+
+### TenantManager - Multi-tenancy (Multi-firmă)
+
+```foxpro
+*-- Creează manager
+loTenant = CreateObject("TenantManager")
+
+*-- Înregistrează firme
+loTenant.RegisterTenant("firma1", "SC Firma 1 SRL", "RO12345678", "DB_Firma1", .Null.)
+loTenant.RegisterTenant("firma2", "SC Firma 2 SA", "RO87654321", "DB_Firma2", .Null.)
+
+*-- Setează tenant activ
+loTenant.SetCurrentTenant("firma1")
+
+*-- Obține tenant curent
+loCurrentTenant = loTenant.GetCurrentTenant()
+? loCurrentTenant.Name
+? loCurrentTenant.CUI
+
+*-- Configurație per tenant
+loTenant.SetTenantConfig("AnafApiUrl", "https://api.anaf.ro/prod")
+lcUrl = loTenant.GetTenantConfig("AnafApiUrl", "")
+
+*-- Execută pentru tenant specific
+loCallback = CreateObject("TenantCallback")
+loResult = loTenant.ExecuteForTenant("firma2", loCallback)
+
+*-- Execută pentru toți tenanții
+laResults = loTenant.ExecuteForAllTenants(loCallback)
+
+*-- Validare acces
+If loTenant.ValidateTenantAccess("RO12345678")
+    * CUI valid pentru context
+EndIf
+
+*-- Lista tenanți
+loTenant.GetAllTenants()
+Browse
+```
+
+### PluginManager - Arhitectură Plugin
+
+```foxpro
+*-- Creează manager
+loPluginMgr = CreateObject("PluginManager")
+loPluginMgr.cPluginsPath = "C:\App\Plugins\"
+
+*-- Auto-descoperire plugin-uri
+loPluginMgr.DiscoverPlugins()
+
+*-- Sau încărcare manuală
+loPluginMgr.LoadPlugin("C:\App\Plugins\MyPlugin.prg")
+
+*-- Activare/Dezactivare
+loPluginMgr.EnablePlugin("MyPlugin")
+loPluginMgr.DisablePlugin("MyPlugin")
+
+*-- Executare hooks
+loContext = CreateObject("EFacturaContext")
+loPluginMgr.ExecuteHooks("BeforeValidation", loContext)
+loPluginMgr.ExecuteHooks("AfterXmlGeneration", loContext)
+
+*-- Obține informații plugin
+loInfo = loPluginMgr.GetPluginInfo("MyPlugin")
+? loInfo.Name + " v" + loInfo.Version
+
+*-- Lista plugin-uri
+loPluginMgr.GetAllPlugins()
+Browse
+
+*-- Creare plugin custom
+Define Class MyCustomPlugin As BasePlugin
+    cName = "My Custom Plugin"
+    cVersion = "1.0.0"
+    cDescription = "Procesare custom factură"
+    nPriority = 50
+    
+    Procedure OnBeforeValidation(toContext)
+        * Adaugă validări custom
+        ? "Custom validation for invoice " + Transform(toContext.nIdUnicFactura)
+    EndProc
+    
+    Procedure OnAfterUpload(toContext)
+        * Acțiuni post-upload
+        ? "Upload completed: " + toContext.cIdSolicitare
+    EndProc
+EndDefine
+```
+
+## Extension Points pentru Plugin-uri
+
+| Extension Point | Descriere |
+|-----------------|-----------|
+| `BeforeValidation` | Înainte de validare factură |
+| `AfterValidation` | După validare factură |
+| `BeforeXmlGeneration` | Înainte de generare XML |
+| `AfterXmlGeneration` | După generare XML |
+| `BeforeUpload` | Înainte de upload ANAF |
+| `AfterUpload` | După upload ANAF |
+| `BeforePersist` | Înainte de salvare |
+| `AfterPersist` | După salvare |
+| `OnStartup` | La pornirea aplicației |
+| `OnShutdown` | La închiderea aplicației |
+| `OnError` | La apariția unei erori |
+| `OnConfigChange` | La modificarea configurației |
