@@ -72,7 +72,7 @@ Define Class EventDispatcher As Custom
 		i = 1
 		Do While i <= This.nListenerCount
 			If This.aListeners[i, 1] == lcEventName And ;
-			   This.aListeners[i, 2] = toHandler
+			   This.aListeners[i, 2] == toHandler
 				*-- Sterge
 				This.RemoveAtIndex(i)
 			Else

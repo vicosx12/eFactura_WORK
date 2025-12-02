@@ -13,10 +13,12 @@ Define Class Test_Performance As Custom
 	Dimension aTestResults[1, 4]  && [name, status, message, duration]
 	nResultCount = 0
 	
-	*-- Praguri de performanta (in secunde)
+	*-- Praguri de performanta configurabile (in secunde)
 	nThreshold_XmlGeneration = 5.0   && Max 5 secunde pentru generare XML
 	nThreshold_Validation = 1.0      && Max 1 secunda pentru validare
 	nThreshold_LargeInvoice = 10.0   && Max 10 secunde pentru factura mare
+	nThreshold_CacheOps = 2.0        && Max 2 secunde pentru 2000 operatii cache
+	nThreshold_QueueOps = 3.0        && Max 3 secunde pentru 1000 operatii queue
 	
 	*---------------------------------------------------------------------------
 	* Procedura: Run
@@ -168,7 +170,7 @@ Define Class Test_Performance As Custom
 			Local loStats
 			loStats = loCache.GetStats()
 			
-			If lnDuration < 2.0  && Max 2 secunde pentru 2000 operatii
+			If lnDuration < This.nThreshold_CacheOps
 				This.RecordPass("CachePerformance", ;
 					"2000 cache ops in " + Transform(lnDuration, "999.999") + " sec. " + ;
 					"Hit ratio: " + Transform(loStats.HitRatio * 100, "999.9") + "%", lnDuration)
@@ -215,7 +217,7 @@ Define Class Test_Performance As Custom
 			lnEnd = Seconds()
 			lnDuration = lnEnd - lnStart
 			
-			If lnDuration < 3.0  && Max 3 secunde pentru 1000 operatii
+			If lnDuration < This.nThreshold_QueueOps
 				This.RecordPass("MessageQueuePerformance", ;
 					"1000 queue ops in " + Transform(lnDuration, "999.999") + " sec", lnDuration)
 			Else

@@ -24,6 +24,9 @@ Define Class RetryPolicy As Custom
 	nCircuitOpenTime = 0
 	cCircuitState = "CLOSED"      && CLOSED, OPEN, HALF_OPEN
 	
+	*-- Jitter configurabil
+	nJitterFactor = 0.2           && Factor jitter (20% default)
+	
 	*-- Statistici
 	nTotalAttempts = 0
 	nSuccessfulAttempts = 0
@@ -184,9 +187,9 @@ Define Class RetryPolicy As Custom
 			lnDelay = This.nInitialDelay
 		EndIf
 		
-		*-- Aplica jitter (10% variatie)
+		*-- Aplica jitter (variatie configurabila)
 		Local lnJitter
-		lnJitter = (Rand() - 0.5) * 0.2 * lnDelay
+		lnJitter = (Rand() - 0.5) * This.nJitterFactor * lnDelay
 		lnDelay = lnDelay + lnJitter
 		
 		*-- Limiteaza la maxim

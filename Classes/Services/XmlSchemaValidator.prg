@@ -170,17 +170,20 @@ Define Class XmlSchemaValidator As Custom
 	
 	*---------------------------------------------------------------------------
 	* Functie: ValidateRequiredFields
-	* Descriere: Verifica campurile obligatorii
+	* Descriere: Verifica campurile obligatorii conform standard SR EN 16931
+	* Nota: Lista de campuri este fixa conform standardul UBL 2.1 pentru e-Factura
 	* Parametri: 
 	*   tcXmlContent - Continutul XML
 	* Returneaza: Logical
 	*---------------------------------------------------------------------------
 	Protected Function ValidateRequiredFields(tcXmlContent)
-		Local loXml, llValid, i
+		Local loXml, llValid, i, lnFieldCount
 		llValid = .T.
 		
-		*-- Campuri obligatorii conform SR EN 16931
-		Dimension laRequiredFields[15]
+		*-- Campuri obligatorii conform SR EN 16931 / UBL 2.1
+		*-- Nota: Lista este fixa conform standard, nu necesita dimensionare dinamica
+		lnFieldCount = 15
+		Dimension laRequiredFields[lnFieldCount]
 		laRequiredFields[1] = "cbc:ID"                    && BT-1 Invoice number
 		laRequiredFields[2] = "cbc:IssueDate"             && BT-2 Issue date
 		laRequiredFields[3] = "cbc:InvoiceTypeCode"       && BT-3 Invoice type code
@@ -206,7 +209,7 @@ Define Class XmlSchemaValidator As Custom
 			loXml.LoadXML(tcXmlContent)
 			
 			*-- Verifica fiecare camp obligatoriu
-			For i = 1 To 15
+			For i = 1 To lnFieldCount
 				Local loNodes
 				loNodes = loXml.SelectNodes("//" + laRequiredFields[i])
 				
