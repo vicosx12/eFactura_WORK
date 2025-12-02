@@ -65,7 +65,7 @@ Define Class HealthChecker As Custom
     * CheckDiskSpace - Check available disk space
     *----------------------------------------------------------------
     Procedure CheckDiskSpace
-        Local lnFreeSpace, lcStatus, lcMessage, lnStart
+        Local lnFreeSpace, lcStatus, lcMessage, lnStart, lnFreeMB
         
         lnStart = Seconds()
         

@@ -253,7 +253,13 @@ Define Class TenantManager As Custom
             This.aTenants[lnIndex, 5] = CreateObject("Empty")
         EndIf
         
-        AddProperty(This.aTenants[lnIndex, 5], tcKey, tcValue)
+        * Check if property exists before adding
+        If Type("This.aTenants[lnIndex, 5]." + tcKey) = "U"
+            AddProperty(This.aTenants[lnIndex, 5], tcKey, tcValue)
+        Else
+            * Property exists, update value directly
+            Store tcValue To ("This.aTenants[lnIndex, 5]." + tcKey)
+        EndIf
         
         * Update current tenant object
         If Not IsNull(This.oCurrentTenant)

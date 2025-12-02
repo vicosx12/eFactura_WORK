@@ -259,12 +259,17 @@ Define Class AuditService As Custom
     * GetIpAddress - Get local IP address
     *----------------------------------------------------------------
     Protected Procedure GetIpAddress
-        Local lcIp
+        Local lcIp, lnPos
         
         Try
-            * Try to get IP from WMI
+            * Get computer info from Sys(0) - returns "machine#user"
             lcIp = Sys(0)
-            lcIp = GetWordNum(lcIp, 2, "#")
+            lnPos = At("#", lcIp)
+            If lnPos > 0
+                lcIp = Substr(lcIp, lnPos + 1)
+            Else
+                lcIp = lcIp
+            EndIf
         Catch
             lcIp = "Unknown"
         EndTry

@@ -346,7 +346,7 @@ Define Class NotificationService As Custom
                 Case lcChar = " "
                     lcResult = lcResult + "+"
                 Otherwise
-                    lcResult = lcResult + "%" + Right(Transform(lnAsc, "@0X"), 2)
+                    lcResult = lcResult + "%" + Padl(Transform(lnAsc, "@X"), 2, "0")
             EndCase
         Next
         

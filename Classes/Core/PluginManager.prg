@@ -361,16 +361,50 @@ Define Class PluginManager As Custom
                 loPlugin = This.aPlugins[lnIndex, 5]
                 lcMethod = laHooks[i, 2]
                 
-                Try
-                    * Call hook method
-                    =Evaluate("loPlugin." + lcMethod + "(toContext)")
-                Catch
-                    This.oLogger.LogError("Eroare executare hook " + lcMethod + ": " + Message())
-                EndTry
+                * Validate method name (alphanumeric only)
+                If This.IsValidMethodName(lcMethod)
+                    Try
+                        * Call hook method using validated name
+                        =Evaluate("loPlugin." + lcMethod + "(toContext)")
+                    Catch
+                        This.oLogger.LogError("Eroare executare hook " + lcMethod + ": " + Message())
+                    EndTry
+                Else
+                    This.oLogger.LogWarning("Nume metodă invalid ignorat: " + lcMethod)
+                EndIf
             EndIf
         Next
         
         Return toContext
+    EndProc
+    
+    *----------------------------------------------------------------
+    * IsValidMethodName - Validate method name for security
+    *----------------------------------------------------------------
+    Protected Procedure IsValidMethodName(tcMethodName)
+        Local i, lcChar
+        
+        If Empty(tcMethodName)
+            Return .F.
+        EndIf
+        
+        * Method must start with letter and contain only alphanumeric and underscore
+        For i = 1 To Len(tcMethodName)
+            lcChar = Substr(tcMethodName, i, 1)
+            If i = 1
+                * First char must be letter
+                If Not IsAlpha(lcChar)
+                    Return .F.
+                EndIf
+            Else
+                * Rest must be alphanumeric or underscore
+                If Not (IsAlpha(lcChar) Or IsDigit(lcChar) Or lcChar = "_")
+                    Return .F.
+                EndIf
+            EndIf
+        Next
+        
+        Return .T.
     EndProc
     
     *----------------------------------------------------------------

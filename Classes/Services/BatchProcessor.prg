@@ -102,7 +102,7 @@ Define Class BatchProcessor As Custom
              Alias C(50), IsRectificativa L, Status C(20))
         
         * Parse each line
-        Local i, lcLine
+        Local i, lcLine, lnFields
         Dimension laFields[1]
         
         For i = lnStartLine To lnLines
