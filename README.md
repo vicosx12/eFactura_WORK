@@ -15,9 +15,15 @@ Acest proiect implementează un sistem complet de facturare electronică compati
 | **Facade** | `EFacturaFacade` | Punct unic de intrare pentru procesarea facturilor |
 | **Chain of Responsibility** | `AbstractHandler`, `ValidationHandler`, etc. | Procesare în etape cu posibilitate de întrerupere |
 | **Observer** | `ProgressSubject`, `ProgressBarObserver` | Notificări de progres către UI |
-| **Builder** | `HandlerChainBuilder` | Construcție flexibilă a chain-ului de procesare |
-| **Strategy** | `XmlStrategyFactory` | Strategii diferite pentru generare XML |
-| **Repository** | `IInvoiceRepository` | Abstractizare acces date |
+| **Builder** | `HandlerChainBuilder`, `InvoiceBuilder` | Construcție flexibilă a chain-ului și facturilor |
+| **Strategy** | `XmlStrategyFactory`, `B2BXmlStrategy`, etc. | Strategii diferite pentru generare XML |
+| **Repository** | `IInvoiceRepository`, `IesiriRepository` | Abstractizare acces date |
+| **Dependency Injection** | `ServiceContainer` | Container pentru gestionarea dependențelor |
+| **Unit of Work** | `UnitOfWork` | Coordonarea tranzacțiilor |
+| **Event Dispatcher** | `EventDispatcher` | Sistem de evenimente pentru decuplare |
+| **Retry/Circuit Breaker** | `RetryPolicy` | Reziliență pentru apeluri API |
+| **Cache** | `CacheService` | Caching pentru reducerea apelurilor repetate |
+| **Message Queue** | `MessageQueue`, `AsyncProcessor` | Procesare asincronă batch |
 
 ### Structura Directoarelor
 
@@ -28,7 +34,8 @@ Acest proiect implementează un sistem complet de facturare electronică compati
 │   ├── /Core/
 │   │   ├── EFacturaContext.prg       # Container date și stare procesare
 │   │   ├── EFacturaFacade.prg        # Facade principal
-│   │   └── ConfigProvider.prg        # Configurări centralizate
+│   │   ├── ConfigProvider.prg        # Configurări centralizate
+│   │   └── ServiceContainer.prg      # Dependency Injection Container
 │   ├── /Handlers/
 │   │   ├── AbstractHandler.prg       # Clasă abstractă handler
 │   │   ├── ValidationHandler.prg     # Validare date
@@ -37,14 +44,41 @@ Acest proiect implementează un sistem complet de facturare electronică compati
 │   │   ├── ApiUploaderHandler.prg    # Upload ANAF
 │   │   └── PersistenceHandler.prg    # Salvare în BD
 │   ├── /Builders/
-│   │   └── HandlerChainBuilder.prg   # Builder pentru chain
+│   │   ├── HandlerChainBuilder.prg   # Builder pentru chain
+│   │   └── InvoiceBuilder.prg        # Builder pentru Invoice
 │   ├── /Observers/
 │   │   ├── ProgressSubject.prg       # Subject Observer
 │   │   └── ProgressBarObserver.prg   # Observer pentru UI
+│   ├── /Repositories/
+│   │   ├── IInvoiceRepository.prg    # Interfață abstractă
+│   │   ├── IesiriRepository.prg      # Repository Iesiri
+│   │   ├── ExportRepository.prg      # Repository Export
+│   │   └── RepositoryFactory.prg     # Factory pentru repositories
+│   ├── /Strategies/
+│   │   ├── XmlGeneratorStrategy.prg  # Strategie abstractă
+│   │   ├── B2BXmlStrategy.prg        # Strategie B2B
+│   │   ├── ExportXmlStrategy.prg     # Strategie Export
+│   │   └── XmlStrategyFactory.prg    # Factory pentru strategii
+│   ├── /Domain/
+│   │   ├── Invoice.prg               # Entitate Invoice
+│   │   └── InvoiceLine.prg           # Entitate linie factură
 │   └── /Services/
 │       ├── LoggerService.prg         # Logging centralizat
-│       └── StatsCollector.prg        # Colector statistici
-├── /Tests/                           # Teste unitare
+│       ├── StatsCollector.prg        # Colector statistici
+│       ├── CacheService.prg          # Cache pentru rezultate API
+│       ├── RetryPolicy.prg           # Politică retry cu circuit breaker
+│       ├── EventDispatcher.prg       # Sistem de evenimente
+│       ├── XmlSchemaValidator.prg    # Validator XSD
+│       ├── UnitOfWork.prg            # Unit of Work pattern
+│       ├── MessageQueue.prg          # Coadă de mesaje
+│       └── AsyncProcessor.prg        # Procesare asincronă
+├── /Tests/                           # Teste unitare și de performanță
+│   ├── Test_ValidationHandler.prg
+│   ├── Test_TaxCalculation.prg
+│   ├── Test_Integration.prg
+│   ├── Test_XmlStrategies.prg
+│   ├── Test_ApiMock.prg
+│   └── Test_Performance.prg
 └── README.md                         # Documentație
 ```
 
@@ -231,3 +265,203 @@ vicosx12@gmail.com
 - **v1.1** (09/2023) - Îmbunătățiri performanță
 - **v1.2** (01/2024) - Suport B2C, optimizări
 - **v2.0** (11/2024) - Refactorizare OOP completă
+- **v2.1** (12/2024) - Servicii avansate: DI Container, Events, Cache, Async
+
+---
+
+## Servicii Avansate
+
+### ServiceContainer (Dependency Injection)
+
+```foxpro
+*-- Creează container
+loContainer = CreateObject("ServiceContainer")
+
+*-- Înregistrează servicii
+loContainer.Register("Logger", "LoggerService", .T.)      && Singleton
+loContainer.Register("Cache", "CacheService", .T.)        && Singleton
+loContainer.Register("Validator", "ValidationHandler")    && Transient
+
+*-- Rezolvă dependențe
+loLogger = loContainer.Resolve("Logger")
+loCache = loContainer.Resolve("Cache")
+
+*-- Creează scope copil
+loScopedContainer = loContainer.CreateScope()
+```
+
+### CacheService
+
+```foxpro
+*-- Creează cache
+loCache = CreateObject("CacheService")
+loCache.SetDefaultTtl(300)  && 5 minute TTL
+
+*-- Set/Get valori
+loCache.Set("api_status_123", '{"stare": "ok"}', 60)  && TTL 60 sec
+lcStatus = loCache.Get("api_status_123", "")
+
+*-- GetOrSet cu factory
+lcResult = loCache.GetOrSet("key", "GetApiResult()", 120)
+
+*-- Statistici
+loStats = loCache.GetStats()
+? "Hit ratio: " + Transform(loStats.HitRatio * 100) + "%"
+```
+
+### RetryPolicy (cu Circuit Breaker)
+
+```foxpro
+*-- Creează politică retry
+loPolicy = CreateObject("RetryPolicy")
+loPolicy.nMaxRetries = 3
+loPolicy.nInitialDelay = 1000      && 1 secunda
+loPolicy.lUseExponentialBackoff = .T.
+
+*-- Circuit Breaker
+loPolicy.lCircuitBreakerEnabled = .T.
+loPolicy.nFailureThreshold = 5     && Deschide circuit după 5 eșecuri
+loPolicy.nCircuitOpenDuration = 60000  && 60 secunde pauză
+
+*-- Execută cu retry
+lcResult = loPolicy.Execute("CallAnafApi()")
+
+*-- Verifică starea circuit breaker
+? "Circuit state: " + loPolicy.cCircuitState  && CLOSED/OPEN/HALF_OPEN
+```
+
+### EventDispatcher
+
+```foxpro
+*-- Creează dispatcher
+loDispatcher = CreateObject("EventDispatcher")
+
+*-- Definește handler
+Define Class MyEventHandler As BaseEventHandler
+    Procedure Handle(toEventData)
+        ? "Invoice uploaded: " + Transform(toEventData.IdFactura)
+    EndProc
+EndDefine
+
+*-- Înregistrează listener
+loHandler = CreateObject("MyEventHandler")
+loDispatcher.AddListener("invoice.uploaded", loHandler, 10)  && prioritate 10
+
+*-- Dispatch eveniment
+loEventData = CreateObject("EventData")
+loEventData.SetData("IdFactura", 12345)
+loDispatcher.Dispatch("invoice.uploaded", loEventData)
+
+*-- Evenimente predefinite
+* invoice.validated, invoice.uploaded, invoice.failed
+* validation.failed, xml.generated, api.error
+* process.started, process.completed
+```
+
+### XmlSchemaValidator
+
+```foxpro
+*-- Creează validator
+loValidator = CreateObject("XmlSchemaValidator")
+
+*-- Validează XML
+llValid = loValidator.Validate(lcXmlContent)
+
+If Not llValid
+    ? "Erori:"
+    ? loValidator.GetErrors()
+EndIf
+
+If loValidator.HasWarnings()
+    ? "Atenționări:"
+    ? loValidator.GetWarnings()
+EndIf
+
+*-- Validare reguli business CIUS-RO
+llValid = loValidator.ValidateBusinessRules(lcXmlContent)
+```
+
+### UnitOfWork
+
+```foxpro
+*-- Creează Unit of Work
+loUoW = CreateObject("UnitOfWork")
+
+*-- Înregistrează repositories
+loUoW.RegisterRepository("Iesiri", loIesiriRepo)
+loUoW.RegisterRepository("Export", loExportRepo)
+
+*-- Marchează entități pentru salvare
+loUoW.MarkNew("Iesiri", loNewInvoice)
+loUoW.MarkDirty("Export", loModifiedInvoice, loOriginalData)
+loUoW.MarkDeleted("Iesiri", loDeletedInvoice)
+
+*-- Commit tranzacție atomică
+loUoW.BeginTransaction()
+If loUoW.Commit()
+    ? "Succes!"
+Else
+    ? "Rollback efectuat"
+EndIf
+```
+
+### AsyncProcessor (Message Queue)
+
+```foxpro
+*-- Creează coada și procesorul
+loQueue = CreateObject("MessageQueue")
+loQueue.cQueueName = "efactura"
+
+loProcessor = CreateObject("AsyncProcessor")
+loProcessor.SetQueue(loQueue)
+loProcessor.SetFacade(loFacade)
+
+*-- Adaugă facturi în coadă
+loProcessor.EnqueueInvoice(101, "Iesiri", .F., 5)  && Prioritate 5
+loProcessor.EnqueueInvoice(102, "Iesiri", .F., 0)
+loProcessor.EnqueueInvoice(103, "Iesiri", .F., 10) && Prioritate mare
+
+*-- Batch enqueue
+Dimension laIds[3]
+laIds[1] = 201
+laIds[2] = 202
+laIds[3] = 203
+loProcessor.EnqueueBatch(@laIds, "Export")
+
+*-- Procesează batch
+loProcessor.nBatchSize = 20
+loProcessor.Start()
+
+*-- Sau procesează tot
+loProcessor.ProcessAll()
+
+*-- Statistici
+loStats = loProcessor.GetStats()
+? "Procesate: " + Transform(loStats.Processed)
+? "Esuate: " + Transform(loStats.Failed)
+? "Throughput: " + Transform(loStats.ThroughputPerSecond) + " facturi/sec"
+```
+
+---
+
+## Rulare Teste
+
+```foxpro
+*-- Teste validare
+Do Tests\Test_ValidationHandler
+
+*-- Teste calcul TVA  
+Do Tests\Test_TaxCalculation
+
+*-- Teste integrare
+Do Tests\Test_Integration
+
+*-- Teste strategii XML
+Do Tests\Test_XmlStrategies
+
+*-- Teste mock API
+Do Tests\Test_ApiMock
+
+*-- Teste performanță
+Do Tests\Test_Performance
+```
