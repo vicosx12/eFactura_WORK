@@ -1500,3 +1500,335 @@ loResult = loBuilder ;
 ? "Failed: " + Transform(loResult.nFailedCount)
 ? "Duration: " + Transform(loResult.GetDuration()) + " seconds"
 ```
+
+## v2.5 Advanced Enterprise Features
+
+### GraphExecutionEngine - DAG Task Execution
+
+Execută taskuri într-un graf direcționat aciclic (DAG) cu procesare paralelă unde este posibil.
+
+```foxpro
+*-- Creează engine
+loEngine = CreateObject("GraphExecutionEngine")
+
+*-- Adaugă taskuri
+loEngine.AddTask("ValidateInvoice", CreateObject("ValidationTask"))
+loEngine.AddTask("CalculateTax", CreateObject("TaxTask"))
+loEngine.AddTask("GenerateXML", CreateObject("XmlTask"))
+loEngine.AddTask("UploadToANAF", CreateObject("UploadTask"))
+
+*-- Definește dependențe
+loEngine.AddDependency("ValidateInvoice", "CalculateTax")
+loEngine.AddDependency("CalculateTax", "GenerateXML")
+loEngine.AddDependency("GenerateXML", "UploadToANAF")
+
+*-- Execută graf
+loResult = loEngine.Execute(loContext)
+? "Success: " + Transform(loResult.Success)
+? "Tasks executed: " + Transform(loResult.ExecutedTasks)
+```
+
+### TemporalWorkflowService - Durable Workflows
+
+Workflow-uri durabile cu timere, semnale și compensare automată.
+
+```foxpro
+*-- Creează serviciu
+loService = CreateObject("TemporalWorkflowService")
+
+*-- Start workflow
+loWorkflow = loService.StartWorkflow("WF-" + Sys(2015), "InvoiceProcessing", loInput)
+
+*-- Execută pași
+loService.ExecuteStep(loWorkflow.cWorkflowId, "Validate", loValidateFunc)
+loService.ExecuteStep(loWorkflow.cWorkflowId, "Process", loProcessFunc)
+
+*-- Programează timer
+loService.ScheduleTimer(loWorkflow.cWorkflowId, 3600, "ReminderTimer")
+
+*-- Trimite semnal
+loService.SignalWorkflow(loWorkflow.cWorkflowId, "ApprovalReceived", loApprovalData)
+
+*-- Completează workflow
+loService.CompleteWorkflow(loWorkflow.cWorkflowId, loResult)
+
+*-- Sau compensează în caz de eroare
+loService.CompensateWorkflow(loWorkflow.cWorkflowId)
+```
+
+### SemanticVersioningService - API Version Management
+
+Gestionează versiunile API-ului cu verificări de compatibilitate.
+
+```foxpro
+*-- Creează serviciu
+loVersioning = CreateObject("SemanticVersioningService")
+
+*-- Înregistrează versiuni
+loVersioning.RegisterVersion("1.0.0", "Initial release", .F.)
+loVersioning.RegisterVersion("1.1.0", "Added new fields", .F.)
+loVersioning.RegisterVersion("2.0.0", "Breaking changes", .T.)
+
+*-- Verifică compatibilitate
+llCompatible = loVersioning.IsCompatible("1.1.0", "1.5.0")  && .T.
+llCompatible = loVersioning.IsCompatible("1.1.0", "2.0.0")  && .F.
+
+*-- Obține versiunea compatibilă
+lcVersion = loVersioning.GetLatestCompatibleVersion("1.0.0")
+```
+
+### BlueprintPatternEngine - Reusable Process Templates
+
+Șabloane reutilizabile pentru procese business cu parametrizare.
+
+```foxpro
+*-- Creează engine
+loEngine = CreateObject("BlueprintPatternEngine")
+
+*-- Înregistrează blueprint
+loEngine.RegisterBlueprint("StandardInvoice", "Standard Invoice Processing", loTemplate)
+
+*-- Instantiază cu parametri
+loParams = CreateObject("Empty")
+AddProperty(loParams, "TaxRate", 19)
+AddProperty(loParams, "Currency", "RON")
+
+loInstance = loEngine.Instantiate("StandardInvoice", loParams)
+
+*-- Execută blueprint
+loResult = loEngine.Execute(loInstance, loContext)
+```
+
+### AdaptiveThrottlingService - Dynamic Rate Limiting
+
+Rate limiting adaptiv bazat pe încărcarea sistemului.
+
+```foxpro
+*-- Creează serviciu
+loThrottle = CreateObject("AdaptiveThrottlingService")
+loThrottle.nBaseLimit = 100
+loThrottle.nCpuThresholdHigh = 80
+loThrottle.nCpuThresholdLow = 40
+
+*-- Verifică dacă request-ul este permis
+If loThrottle.AllowRequest("client-123")
+    *-- Procesează request
+    ProcessRequest()
+Else
+    *-- Rate limit exceeded
+    ? "Too many requests"
+EndIf
+
+*-- Limitele se ajustează automat în funcție de CPU și error rate
+? "Current limit: " + Transform(loThrottle.GetCurrentLimit())
+```
+
+### PredictiveCacheService - Pattern-Based Caching
+
+Cache predictiv care învață pattern-uri de acces și pre-încarcă date.
+
+```foxpro
+*-- Creează serviciu
+loCache = CreateObject("PredictiveCacheService")
+
+*-- Utilizare normală
+loCache.Set("invoice-123", loInvoiceData, 3600)
+loData = loCache.Get("invoice-123")  && Înregistrează pattern
+
+*-- Serviciul învață că după "invoice-123" accesezi "invoice-124"
+*-- și va pre-încărca automat "invoice-124" când accesezi "invoice-123"
+
+*-- Statistici
+loStats = loCache.GetStats()
+? "Pattern count: " + Transform(loStats.PatternCount)
+? "Prediction threshold: " + Transform(loStats.PredictionThreshold)
+```
+
+### CircuitBreakerAggregator - Service Health Aggregation
+
+Agregare stări circuit breaker pentru monitorizare globală.
+
+```foxpro
+*-- Creează aggregator
+loAggregator = CreateObject("CircuitBreakerAggregator")
+
+*-- Înregistrează breakers
+loAggregator.RegisterBreaker("ANAF_API", loAnafBreaker)
+loAggregator.RegisterBreaker("Database", loDbBreaker)
+loAggregator.RegisterBreaker("FileSystem", loFsBreaker)
+
+*-- Verifică sănătate globală
+loHealth = loAggregator.GetHealth()
+? "Overall state: " + loHealth.OverallState  && HEALTHY/DEGRADED/CRITICAL
+? "Open breakers: " + Transform(loHealth.OpenCount)
+? "Half-open breakers: " + Transform(loHealth.HalfOpenCount)
+
+*-- Verifică individual
+lcState = loAggregator.GetServiceHealth("ANAF_API")
+```
+
+### DistributedLockService - Distributed Locking
+
+Lock-uri distribuite pentru controlul concurenței.
+
+```foxpro
+*-- Creează serviciu
+loLockService = CreateObject("DistributedLockService")
+
+*-- Acquire lock
+If loLockService.AcquireLock("invoice-123", "worker-1", 30)
+    Try
+        *-- Secțiune critică
+        ProcessInvoice("invoice-123")
+    Finally
+        *-- Release lock
+        loLockService.ReleaseLock("invoice-123", "worker-1")
+    EndTry
+Else
+    ? "Could not acquire lock"
+EndIf
+
+*-- Try acquire cu timeout
+llAcquired = loLockService.TryAcquire("invoice-456", "worker-2", 30, 10)
+
+*-- Info lock
+loInfo = loLockService.GetLockInfo("invoice-123")
+? "Locked: " + Transform(loInfo.Locked)
+? "Owner: " + loInfo.OwnerId
+```
+
+### EventStreamProcessor - Real-Time Stream Processing
+
+Procesare stream-uri de evenimente în timp real cu windowing și agregare.
+
+```foxpro
+*-- Creează processor
+loProcessor = CreateObject("EventStreamProcessor")
+
+*-- Creează stream
+loStream = loProcessor.CreateStream("invoices", "invoice.*")
+
+*-- Publică evenimente
+loProcessor.PublishEvent("invoices", loInvoiceEvent)
+
+*-- Procesează cu handler
+loProcessor.ProcessStream("invoices", loEventHandler)
+
+*-- Windowed processing
+loProcessor.CreateWindowedStream("invoices", 300)  && 5 minute window
+
+*-- Agregare în window
+loAggregator = CreateObject("SumAggregator")
+loResult = loProcessor.AggregateWindow("invoices", loAggregator)
+```
+
+### ResourcePoolManager - Connection Pooling
+
+Gestionare pool-uri de resurse reutilizabile (conexiuni, thread-uri).
+
+```foxpro
+*-- Creează manager
+loPoolMgr = CreateObject("ResourcePoolManager")
+
+*-- Creează pool cu factory
+loFactory = CreateObject("ConnectionFactory")
+loPool = loPoolMgr.CreatePool("db-pool", 5, 20, loFactory)
+
+*-- Acquire resource
+loConn = loPoolMgr.AcquireResource("db-pool")
+
+If Not IsNull(loConn)
+    Try
+        *-- Utilizează conexiunea
+        loConn.ExecuteQuery("SELECT * FROM Iesiri")
+    Finally
+        *-- Release înapoi în pool
+        loPoolMgr.ReleaseResource("db-pool", loConn)
+    EndTry
+EndIf
+
+*-- Statistici pool
+loStats = loPoolMgr.GetPoolStats("db-pool")
+? "Current size: " + Transform(loStats.CurrentSize)
+? "Available: " + Transform(loStats.Available)
+? "In use: " + Transform(loStats.InUse)
+```
+
+## Rezumat Caracteristici
+
+### Core Architecture (v1.0)
+✅ Chain of Responsibility pentru procesare etapizată
+✅ Facade pentru simplificare interfață
+✅ Observer pentru notificări progres
+✅ Builder pentru construcție flexibilă
+✅ Strategy pentru strategii XML multiple
+✅ Repository pentru abstractizare date
+
+### Advanced Services (v2.1)
+✅ ServiceContainer cu Dependency Injection
+✅ UnitOfWork pentru tranzacții coordonate
+✅ CacheService cu TTL și evicție LRU
+✅ RetryPolicy cu Circuit Breaker
+✅ EventDispatcher cu priorități
+✅ XmlSchemaValidator cu CIUS-RO
+✅ AsyncProcessor + MessageQueue
+
+### Enterprise Features (v2.2)
+✅ HealthChecker pentru diagnostice sistem
+✅ AuditService pentru compliance
+✅ NotificationService (email/SMS)
+✅ RateLimiter cu token bucket
+✅ BatchProcessor (CSV import/export)
+✅ ConfigHotReload live
+✅ MetricsCollector Prometheus-style
+✅ PdfGenerator din XML UBL
+✅ TenantManager multi-firmă
+✅ PluginManager cu hooks
+
+### Advanced Integration (v2.3)
+✅ SagaOrchestrator cu compensare
+✅ FeatureFlagService configurabil
+✅ EncryptionService cu key rotation
+✅ WebhookManager incoming/outgoing
+✅ QueryBuilder fluent
+✅ InvoiceStateMachine
+✅ LocalizationService (RO/EN/HU)
+✅ BackupService cu programare
+✅ ApiGateway cu routing
+✅ DistributedTracer
+✅ SchemaMigrator
+✅ ReportTemplateEngine
+
+### Enterprise Patterns (v2.4)
+✅ CQRSService (Command/Query Separation)
+✅ EventSourcingService cu event store
+✅ SpecificationPattern compozabil
+✅ DecoratorPattern pentru handlers
+✅ MediatorPattern request/response
+✅ DomainEvents pentru agregați
+✅ IdempotencyService
+✅ OutboxPattern transacțional
+✅ CompensationService
+✅ AuthorizationService (RBAC/ABAC)
+✅ ReadReplicaService load balancing
+✅ BulkOperationsPipeline high-performance
+
+### Advanced Enterprise (v2.5)
+✅ GraphExecutionEngine - DAG cu paralelizare
+✅ TemporalWorkflowService - Workflow-uri durabile
+✅ SemanticVersioningService - Version management
+✅ BlueprintPatternEngine - Process templates
+✅ AdaptiveThrottlingService - Rate limiting dinamic
+✅ PredictiveCacheService - Cache cu învățare
+✅ CircuitBreakerAggregator - Health aggregation
+✅ DistributedLockService - Concurrency control
+✅ EventStreamProcessor - Stream processing
+✅ ResourcePoolManager - Connection pooling
+
+## Compatibilitate
+
+Toate implementările sunt compatibile cu **Visual FoxPro 9 SP2** și păstrează compatibilitatea înapoi cu codul existent prin flagul `glUseNewArchitecture`.
+
+## Licență
+
+© 2024 - eFactura_WORK Project
