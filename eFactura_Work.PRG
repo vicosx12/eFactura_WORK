@@ -114,8 +114,8 @@ const (
 *
 * Trimite automat e-Factura in SPV?	4 zile, 5 zile, 1 zi de la emiterea facturii fiscale
 *
-* Token-urile de tip OPAQUE vor putea fi folosite pâna la data de 15.04.2024. 
-*	Începând de la acea data, toti utilizatorii vor folosi doar token-uri de tip JWT
+* Token-urile de tip OPAQUE vor putea fi folosite pï¿½na la data de 15.04.2024. 
+*	ï¿½ncepï¿½nd de la acea data, toti utilizatorii vor folosi doar token-uri de tip JWT
 *
 *    <cac:PayeeParty>
 *        <cac:PartyIdentification>
@@ -180,11 +180,11 @@ const (
 && 2. Ignorarea repetata a mesajelor de depasire a limitelor maxime poate duce la blocarea accesului la API pentru respectivul utilizator si, in cazurile grave, la blocarea accesului aplicatiei.
 *
 *
-&& Documentele justificative ale facturii sau ata.amentele, pot sa fie încorporate în structura de
+&& Documentele justificative ale facturii sau ata.amentele, pot sa fie ï¿½ncorporate ï¿½n structura de
 && date a facturii .i nu pot fi trimise separat prin sistemul RO e-Factura (acestea nu sunt obligatorii
 && din perspectiva standardului de facturare electronica). Suma dimensiunilor tuturor fi.ierelor
 && ata.ate nu trebuie sa depa.easca 3Mb.
-&& Numarul maxim de documente încorporate care sus.in factura este limitat la 50.
+&& Numarul maxim de documente ï¿½ncorporate care sus.in factura este limitat la 50.
 && Codurile MIME ale documentelor ata.ate permise:
 && - Aplicatie/pdf;
 && - Imagine/png;
@@ -194,35 +194,35 @@ const (
 && - Aplicatie/vnd.oasis.opendocument.spreadsheet.
 
 #if .f.
-Câmpurile obligatorii e-Factura contin datele relevante despre o factura, din punct de vedere fiscal, legal si juridic. 
-Aceste date se trimit catre SPV în formatul XML UBL.  
+Cï¿½mpurile obligatorii e-Factura contin datele relevante despre o factura, din punct de vedere fiscal, legal si juridic. 
+Aceste date se trimit catre SPV ï¿½n formatul XML UBL.  
 
 
 Iar daca lucrezi cu aplicatiile web ANAF (versiunea extinsa sau cea simplificata), 
-e cu atât mai recomandat sa întelegi câmpurile obligatorii e-Factura.
+e cu atï¿½t mai recomandat sa ï¿½ntelegi cï¿½mpurile obligatorii e-Factura.
 
-Cum completezi câmpurile obligatorii e-Factura utilizând aplicatiile web ANAF
-Majoritatea acestor câmpuri obligatorii sunt evidente, dar sa le luam pe rând.
+Cum completezi cï¿½mpurile obligatorii e-Factura utilizï¿½nd aplicatiile web ANAF
+Majoritatea acestor cï¿½mpuri obligatorii sunt evidente, dar sa le luam pe rï¿½nd.
 
-Câmpuri care tin de identificarea facturii
+Cï¿½mpuri care tin de identificarea facturii
 Numarul facturii (BT-1): completezi cu seria si numarul facturii.
 
 Data emiterii facturii (BT-2): completezi cu data la care ai emis factura.
 
 Codul tipului facturii (BT-3): alegi
 
-380 pentru orice factura de vânzare-cumparare
+380 pentru orice factura de vï¿½nzare-cumparare
 ***381 pentru orice factura storno sau pentru o nota de credit
 *384 pentru orice factura care corecteaza o alta factura emisa anterior cu greseli
 
 *........................................................
 389 pentru autofactura (citeste aici ce este autofactura)
 
-Autofactura se transmite în SPV ANAF la fel ca oricare alta factura, cu o singura diferen?a. În câmpul Tip de factura alegi 389 – Autofactura.
+Autofactura se transmite ï¿½n SPV ANAF la fel ca oricare alta factura, cu o singura diferen?a. ï¿½n cï¿½mpul Tip de factura alegi 389 ï¿½ Autofactura.
 Autofactura nu primeste un numar secvential, asa cum primeste o factura orginala. 
-Se emite într-un singur exemplar.
+Se emite ï¿½ntr-un singur exemplar.
 Cum spuneam mai sus, rolul autofacturii este legat strict de raportarea TVA-ului. 
-Nu poti folosi autofactura ca document justificativ al unei cheltuieli sau ca sa receptionezi marfa în gestiune.
+Nu poti folosi autofactura ca document justificativ al unei cheltuieli sau ca sa receptionezi marfa ï¿½n gestiune.
 
 In conformitate cu art. 319 alin. 18 din Codul fiscal si Normele metodologice (redate mai jos) 
 beneficiarul poate emite facturi in numele si in contul furnizorului/prestatorului, 
@@ -251,34 +251,34 @@ fie prin bifarea campului de autofactura in interfata SPV.
 
 751 pentru transmiterea facturilor la bonuri fiscale
 Daca alegi 381 sau 384, 
-îti recomandam sa completezi si câmpul Referinta factura anterioara, 
+ï¿½ti recomandam sa completezi si cï¿½mpul Referinta factura anterioara, 
 unde treci numarul si data facturii precedente (cea care este corectata sau stornata).
 
-Codul monedei (BT-5): alegi din lista moneda în care ai emis factura
+Codul monedei (BT-5): alegi din lista moneda ï¿½n care ai emis factura
 
-Câmpuri care tin de identificarea vânzatorului
-Numele vânzatorului (BT-27): completezi cu denumirea firmei tale
+Cï¿½mpuri care tin de identificarea vï¿½nzatorului
+Numele vï¿½nzatorului (BT-27): completezi cu denumirea firmei tale
 
-Codul tarii Vânzatorului (BT-40): completezi cu RO – România
+Codul tarii Vï¿½nzatorului (BT-40): completezi cu RO ï¿½ Romï¿½nia
 
-Localitatea Vânzatorului (BT-37): completezi localitatea unde ai sediul social. 
+Localitatea Vï¿½nzatorului (BT-37): completezi localitatea unde ai sediul social. 
 Atentie: daca esti din Bucuresti, aici vei trece sectorul (ex: SECTOR 1).
 
-Adresa Vânzatorului (BT-35): completezi adresa sediului social.
+Adresa Vï¿½nzatorului (BT-35): completezi adresa sediului social.
 
-Câmpuri care tin de identificarea cumparatorului
-Asa cum ai completat datele despre firma ta la Vânzator, tot la fel vei completa datele despre clientul tau la Cumparator.
+Cï¿½mpuri care tin de identificarea cumparatorului
+Asa cum ai completat datele despre firma ta la Vï¿½nzator, tot la fel vei completa datele despre clientul tau la Cumparator.
 
-Câmpuri care tin de produsele sau serviciile vândute
-Numele articolului (BT-153): completezi cu denumirea produselor sau serviciilor vândute
+Cï¿½mpuri care tin de produsele sau serviciile vï¿½ndute
+Numele articolului (BT-153): completezi cu denumirea produselor sau serviciilor vï¿½ndute
 
-Cantitatea facturata (BT-129): completezi cu numarul produselor sau serviciilor vândute
+Cantitatea facturata (BT-129): completezi cu numarul produselor sau serviciilor vï¿½ndute
 
 Unitatea de masura (BT-130): alegi din lista unitatea de masura (cel mai frecvent, aici vei trece bucati, dar lista de unitati de masura este exhaustiva)
 
 Pretul Net (BT-146): completezi cu pretul unitar fara TVA
 
-Valoarea neta (BT-131): completezi cu rezultatul înmultirii pretului unitar fara TVA cu cantitatea
+Valoarea neta (BT-131): completezi cu rezultatul ï¿½nmultirii pretului unitar fara TVA cu cantitatea
 
 Categoria de TVA (BT-151): alegi
 
@@ -297,16 +297,16 @@ Cota de TVA (BT-152):
 	daca ai ales S, completezi cu 19% sau, daca vinzi produse la cota redusa, completezi cu 9% sau cu 5%.
 
 Detalierea TVA
-Câmpurile de aici se autocompleteaza în aplicatia web ANAF. Nu e nevoie sa intervii în aceasta sectiune.
+Cï¿½mpurile de aici se autocompleteaza ï¿½n aplicatia web ANAF. Nu e nevoie sa intervii ï¿½n aceasta sectiune.
 
 Totalurile documentului
-Si aici vei observa ca majoritatea câmpurilor obligatorii e-Factura sunt deja completate. Mai trebuie doar sa treci:
+Si aici vei observa ca majoritatea cï¿½mpurilor obligatorii e-Factura sunt deja completate. Mai trebuie doar sa treci:
 
 Suma platita (BT-113): daca factura a fost achitata partial sau integral, aici treci suma achitata
 Valoarea de rotunjire (BT-114): pentru o factura cu un total cu trei sau mai multe zecimale, aici trebuie sa treci suma rotunjita la doua zecimale
-Valoarea TVA totala a facturii în moneda de contabilizare (BT-111): 
-	daca factura este în RON, aici treci aceeasi valoare din câmpul Valoarea totala a facturii cu TVA (BT-112); 
-	daca factura este în valuta, aici treci valoarea totala a facturii cu TVA în RON la cursul agreat cu clientul.
+Valoarea TVA totala a facturii ï¿½n moneda de contabilizare (BT-111): 
+	daca factura este ï¿½n RON, aici treci aceeasi valoare din cï¿½mpul Valoarea totala a facturii cu TVA (BT-112); 
+	daca factura este ï¿½n valuta, aici treci valoarea totala a facturii cu TVA ï¿½n RON la cursul agreat cu clientul.
 
 #endif
 
@@ -315,7 +315,7 @@ Valoarea TVA totala a facturii în moneda de contabilizare (BT-111):
 *
 *  AUTHOR: Vicos, 2023
 *
-*  COPYRIGHT © 2023 All Rights Reserved.
+*  COPYRIGHT ï¿½ 2023 All Rights Reserved.
 *
 *     vicosx12#gmail.com
 *
@@ -331,96 +331,96 @@ Valoarea TVA totala a facturii în moneda de contabilizare (BT-111):
 *
 *  PROGRAM DESCRIPTION:
 *
-*  În Monitorul Oficial nr. 977 din 27 octombrie 2023 a fost publicata Legea nr.296/2023 
+*  ï¿½n Monitorul Oficial nr. 977 din 27 octombrie 2023 a fost publicata Legea nr.296/2023 
 *  privind unele masuri fiscal-bugetare pentru asigurarea sustenabilitatii
-*  financiare a României pe termen lung prin care s-au adus modificari referitoare la
+*  financiare a Romï¿½niei pe termen lung prin care s-au adus modificari referitoare la
 *  facturarea electronica.
-*  Aceste modificari au ca scop implementarea etapizata a Deciziei de punere în
-*  aplicare (UE) 2023/1553 a Consiliului din 25 iulie 2023 de autorizare a României sa
+*  Aceste modificari au ca scop implementarea etapizata a Deciziei de punere ï¿½n
+*  aplicare (UE) 2023/1553 a Consiliului din 25 iulie 2023 de autorizare a Romï¿½niei sa
 *  introduca o masura speciala de derogare de la articolele 218 si 232 din Directiva
 *  2006/112/CE privind sistemul comun al taxei pe valoarea adaugata. 
-*  Decizia permite României, începând cu data de 1 ianuarie 2024, sa instituie facturarea electronica
-*  obligatorie pentru toate tranzactiile efectuate între persoanele impozabile stabilite pe teritoriul României.
+*  Decizia permite Romï¿½niei, ï¿½ncepï¿½nd cu data de 1 ianuarie 2024, sa instituie facturarea electronica
+*  obligatorie pentru toate tranzactiile efectuate ï¿½ntre persoanele impozabile stabilite pe teritoriul Romï¿½niei.
 *
-*  Procesul de implementare va fi realizat în doua etape, astfel:
+*  Procesul de implementare va fi realizat ï¿½n doua etape, astfel:
 *
-*  I. În prima etapa, în perioada 1 ianuarie 2024 - 30 iunie 2024,
-*   operatorii economici - persoane impozabile stabilite în România, 
-*  indiferent daca sunt sau nu înregistrate în scopuri de TVA
-*  au obligatia sa raporteze în sistemul national privind factura electronica
-*  RO e-Factura toate facturile emise în relatia B2B si în relatia cu institutiile publice,
-*  altele decât cele efectuate în relatia B2G, pentru care exista obligatia utilizarii Ro eFactura
-*  începând cu data de 01 iulie 2022.
+*  I. ï¿½n prima etapa, ï¿½n perioada 1 ianuarie 2024 - 30 iunie 2024,
+*   operatorii economici - persoane impozabile stabilite ï¿½n Romï¿½nia, 
+*  indiferent daca sunt sau nu ï¿½nregistrate ï¿½n scopuri de TVA
+*  au obligatia sa raporteze ï¿½n sistemul national privind factura electronica
+*  RO e-Factura toate facturile emise ï¿½n relatia B2B si ï¿½n relatia cu institutiile publice,
+*  altele decï¿½t cele efectuate ï¿½n relatia B2G, pentru care exista obligatia utilizarii Ro eFactura
+*  ï¿½ncepï¿½nd cu data de 01 iulie 2022.
 *
 *  De asemenea, operatorii economici persoane impozabile nestabilite, 
-*  dar înregistrate în scopuri de TVA în România au obligatia, 
-*  începând cu 1 ianuarie 2024,
-*  sa raporteze în sistemul na?ional privind factura electronica RO e-Factura toate facturile
-*  emise în relatia B2B pentru livrari de bunuri si prestari de servicii care au locul livrarii
-*  sau prestarii în România.
+*  dar ï¿½nregistrate ï¿½n scopuri de TVA ï¿½n Romï¿½nia au obligatia, 
+*  ï¿½ncepï¿½nd cu 1 ianuarie 2024,
+*  sa raporteze ï¿½n sistemul na?ional privind factura electronica RO e-Factura toate facturile
+*  emise ï¿½n relatia B2B pentru livrari de bunuri si prestari de servicii care au locul livrarii
+*  sau prestarii ï¿½n Romï¿½nia.
 *
 *  Urmatoarele operatiuni sunt exceptate de la obligatia utilizarii sistemului
 *  national privind factura electronica RO e-Factura:
-*  - livrarile de bunuri expediate sau transportate în afara Uniunii Europene de catre
-*  furnizor sau de alta persoana în contul sau;
-*  - livrarile de bunuri expediate sau transportate în afara Uniunii Europene de catre
-*  cumparatorul care nu este stabilit în România sau de alta persoana în contul sau, cu
-*  exceptia bunurilor transportate de cumparatorul însusi si care sunt folosite la echiparea
+*  - livrarile de bunuri expediate sau transportate ï¿½n afara Uniunii Europene de catre
+*  furnizor sau de alta persoana ï¿½n contul sau;
+*  - livrarile de bunuri expediate sau transportate ï¿½n afara Uniunii Europene de catre
+*  cumparatorul care nu este stabilit ï¿½n Romï¿½nia sau de alta persoana ï¿½n contul sau, cu
+*  exceptia bunurilor transportate de cumparatorul ï¿½nsusi si care sunt folosite la echiparea
 *  ori alimentarea ambarcatiunilor si a avioanelor de agrement sau a oricarui altui mijloc
 *  de transport de uz privat;
 *  - livrarile intracomunitare de bunuri.
 *
-*  Facturarea electronica nu se aplica în situatia prevazuta de 
+*  Facturarea electronica nu se aplica ï¿½n situatia prevazuta de 
 *  art. 6 din OUG nr.120/2021, cu modificarile si completarile ulterioare.
 *  
-*  Furnizorii, persoane impozabile stabilite în România, pentru operatiunile
-*  efectuate în relatia B2B, persoane impozabile stabilite în România pentru operatiunile
-*  efectuate în relatia cu institutii publice, altele decât cele efectuate în relatia B2G, 
-*  si persoane impozabile nestabilite, dar înregistrate în scopuri de TVA în România, 
+*  Furnizorii, persoane impozabile stabilite ï¿½n Romï¿½nia, pentru operatiunile
+*  efectuate ï¿½n relatia B2B, persoane impozabile stabilite ï¿½n Romï¿½nia pentru operatiunile
+*  efectuate ï¿½n relatia cu institutii publice, altele decï¿½t cele efectuate ï¿½n relatia B2G, 
+*  si persoane impozabile nestabilite, dar ï¿½nregistrate ï¿½n scopuri de TVA ï¿½n Romï¿½nia, 
 *  sunt obligati sa transmita facturile emise catre destinatari conform prevederilor 
 *  art. 319 din Legea nr.227/2015 privind Codul fiscal, cu modificarile si completarile ulterioare, 
-*  cu excepia situatiei în care atât furnizorul/prestatorul, cât si destinatarul sunt înregistrati
-*  în Registrul RO e-Factura.
+*  cu excepia situatiei ï¿½n care atï¿½t furnizorul/prestatorul, cï¿½t si destinatarul sunt ï¿½nregistrati
+*  ï¿½n Registrul RO e-Factura.
 *  Termenul-limita pentru transmiterea facturilor emise, pentru livrarile de
-*  bunuri si prestarile de servicii care au locul livrarii sau prestarii în România, 
-*  în sistemul national privind factura electronica RO e-Factura 
+*  bunuri si prestarile de servicii care au locul livrarii sau prestarii ï¿½n Romï¿½nia, 
+*  ï¿½n sistemul national privind factura electronica RO e-Factura 
 *  este de 5 zile lucratoare de la data emiterii facturii, 
-*  dar nu mai târziu de 5 zile lucratoare de la data-limita prevazuta pentru emiterea facturii 
+*  dar nu mai tï¿½rziu de 5 zile lucratoare de la data-limita prevazuta pentru emiterea facturii 
 *  la art.319 alin.(16) din Codul fiscal.
 *  
-*  Nerespectarea termenului limita pentru transmiterea facturilor în sistemul
+*  Nerespectarea termenului limita pentru transmiterea facturilor ï¿½n sistemul
 *  national privind factura electronica RO e-Factura constituie contraventie si se
 *  sanctioneaza cu amenda de la 5.000 lei la 10.000 lei, pentru persoanele juridice
-*  încadrate în categoria contribuabililor mari, definiti potrivit legii, cu amenda de la 2.500
-*  lei la 5.000 lei, pentru persoanele juridice încadrate în categoria contribuabililor
+*  ï¿½ncadrate ï¿½n categoria contribuabililor mari, definiti potrivit legii, cu amenda de la 2.500
+*  lei la 5.000 lei, pentru persoanele juridice ï¿½ncadrate ï¿½n categoria contribuabililor
 *  mijlocii, definiti potrivit legii, si cu amenda de la 1.000 lei la 2.500 lei, pentru celelalte
 *  persoane juridice, precum si pentru persoanele fizice.
 *  
 *  Prin exceptie, 
-*  în perioada 1 ianuarie - 31 martie 2024, 
-*  nerespectarea termenului limita pentru transmiterea facturilor în sistemul national
+*  ï¿½n perioada 1 ianuarie - 31 martie 2024, 
+*  nerespectarea termenului limita pentru transmiterea facturilor ï¿½n sistemul national
 *  privind factura electronica RO e-Factura nu se sanctioneaza.
 *  
-*  II. În a doua etapa, 
-*  începând cu data de 01.07.2024, 
+*  II. ï¿½n a doua etapa, 
+*  ï¿½ncepï¿½nd cu data de 01.07.2024, 
 *  emitentii facturilor electronice au obligatia de transmitere a acestora catre destinatari 
-*   utilizând sistemul national privind factura electronica RO e-Factura, 
+*   utilizï¿½nd sistemul national privind factura electronica RO e-Factura, 
 *  cu respectarea prevederilor art. 4 alin. (1) din OUG nr.120/2021.
 *  
-*  Începând cu data de 1 iulie 2024
-*  pentru operatiunile realizate între persoane impozabile stabilite în România 
+*  ï¿½ncepï¿½nd cu data de 1 iulie 2024
+*  pentru operatiunile realizate ï¿½ntre persoane impozabile stabilite ï¿½n Romï¿½nia 
 *  conform art. 266 alin. (2), 
-*  sunt considerate facturi numai facturile care îndeplinesc conditiile prevazute de 
+*  sunt considerate facturi numai facturile care ï¿½ndeplinesc conditiile prevazute de 
 *  Ordonanta de urgenta a Guvernului nr. 120/2021. 
 *  Utilizarea facturii electronice face obiectul acceptarii de catre destinatar, 
-*  cu exceptia facturilor care îndeplinesc conditiile prevazute de 
+*  cu exceptia facturilor care ï¿½ndeplinesc conditiile prevazute de 
 *  Ordonana de urgenta a Guvernului nr. 120/2021, cu modificarile si completarile ulterioare.
-*  Totodata, primirea si înregistrarea de catre destinatari - persoane impozabile
-*  stabilite în România conform art. 266 alin. (2) din Codul fiscal, a unei facturi emise
-*  de operatori economici stabiliti în România, în relatia B2B, fara a fi transmisa prin
+*  Totodata, primirea si ï¿½nregistrarea de catre destinatari - persoane impozabile
+*  stabilite ï¿½n Romï¿½nia conform art. 266 alin. (2) din Codul fiscal, a unei facturi emise
+*  de operatori economici stabiliti ï¿½n Romï¿½nia, ï¿½n relatia B2B, fara a fi transmisa prin
 *  sistemul national privind factura electronica RO e-Factura, 
 *  constituie contraventie si se sanctioneaza cu o amenda egala 
-* (cu cuantumul TVA înscris în factura) <= OUG15/14.12.2023 => 15% din valoarea facturii.
+* (cu cuantumul TVA ï¿½nscris ï¿½n factura) <= OUG15/14.12.2023 => 15% din valoarea facturii.
 *  
 *
 *  CALLING SYNTAX:
@@ -524,10 +524,10 @@ Valoarea TVA totala a facturii în moneda de contabilizare (BT-111):
 * pentru un token JWT apelul fiind:
 * -H "Authorization: JWT 0c9c.."
 * 
-* Post by mrapi » 30 Jan 2024, 15:37
+* Post by mrapi ï¿½ 30 Jan 2024, 15:37
 * nu cred,lasi codul de apel acelasi
 *
-* Câmpuri noi pentru medicii platiti de Casele de Sanatate
+* Cï¿½mpuri noi pentru medicii platiti de Casele de Sanatate
 * 
 * Incepand cu date de 1 iulie 2024, Casele de Sanatate obliga medicii de familie sa parcurga un proces mai complex de validare a decontarilor si de transmitere a faptelor pentru plata serviciilor prestate.
 * 
@@ -556,6 +556,50 @@ LParameters tnIdUnicFactura, tlRectificativa, tcDetalii_CL, tlIsExporteFact, tcA
 If Empty(tlIsAutoFactura)
 	tlIsAutoFactura = .F.
 EndIf
+*
+*-- ============================================================================
+*-- OOP ARCHITECTURE INTEGRATION (v2.0)
+*-- Set glUseNewArchitecture to .T. to use the refactored OOP classes
+*-- Default is .F. for backward compatibility
+*-- ============================================================================
+If Type('glUseNewArchitecture') = 'U'
+	Public glUseNewArchitecture
+	glUseNewArchitecture = .F.  && Set to .T. to use new architecture
+EndIf
+*
+*-- Use new OOP architecture if enabled
+If glUseNewArchitecture
+	Local loFacade, lcResult
+	
+	*-- Load class procedures
+	Set Procedure To Classes\Core\EFacturaFacade Additive
+	Set Procedure To Classes\Core\EFacturaContext Additive
+	Set Procedure To Classes\Core\ConfigProvider Additive
+	Set Procedure To Classes\Handlers\AbstractHandler Additive
+	Set Procedure To Classes\Handlers\ValidationHandler Additive
+	Set Procedure To Classes\Handlers\TaxCalculationHandler Additive
+	Set Procedure To Classes\Handlers\XmlBuilderHandler Additive
+	Set Procedure To Classes\Handlers\ApiUploaderHandler Additive
+	Set Procedure To Classes\Handlers\PersistenceHandler Additive
+	Set Procedure To Classes\Builders\HandlerChainBuilder Additive
+	Set Procedure To Classes\Observers\ProgressSubject Additive
+	Set Procedure To Classes\Observers\ProgressBarObserver Additive
+	Set Procedure To Classes\Services\LoggerService Additive
+	Set Procedure To Classes\Services\StatsCollector Additive
+	
+	*-- Create facade and process
+	loFacade = CreateObject("EFacturaFacade")
+	lcResult = loFacade.Process(tnIdUnicFactura, tcAlias, tlRectificativa, tcDetalii_CL, tlIsExporteFact, tlIsAutoFactura)
+	
+	*-- Release facade
+	loFacade = .Null.
+	Release loFacade
+	
+	Return lcResult
+EndIf
+*-- ============================================================================
+*-- END OOP ARCHITECTURE INTEGRATION
+*-- ============================================================================
 *
 If _Vfp.StartMode=0 And ICAS.oSETTINGS.eFactura_Prod And Type('m.DevMode')='U'
 	*
@@ -1093,14 +1137,14 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 	&& /*     */     
 	&& /* 175 */     this._listID = new String[] { "S", "Z", "E", "AE", "K", "G", "O", "L", "M", "B" };
 	&&  nomenclator 5305: 
-	&& S=Standard rate,														“Cota normala”
+	&& S=Standard rate,														ï¿½Cota normalaï¿½
 	&& Z=Zero rated goods,													"Cota zero"
-	&& E=Exempt from tax,													“Scutit de TVA”
+	&& E=Exempt from tax,													ï¿½Scutit de TVAï¿½
 	&& AE=VAT Reverse charge,												"Taxare inversa"
 	&& K=VAT exempt for EEA intra-community supply of goods and services,	"Livrare intracomunitara"
-	&& G=Free export item, tax not charged,									“Export în afara UE”
+	&& G=Free export item, tax not charged,									ï¿½Export ï¿½n afara UEï¿½
 	&& O=Service outside scope of tax,										"Nu face obiectul TVA"
-	&& L=Canary Islands general indirect tax,								“IGIC”
+	&& L=Canary Islands general indirect tax,								ï¿½IGICï¿½
 	&& M=Tax for production, services and importation in Ceuta and Melilla	"IPSI"
 	
 	&& this._CEFVATEX = new String[] { 
@@ -1174,7 +1218,7 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 					16		ALTE livrari scutite cu drept de deducere
 					17		livrari scutite fara drept de deducere
 					18		Operatiuni neimpozabile
-					27-28	servicii intracomunitare cf. art.278 ALIN.(1) cu locul prestarii în România
+					27-28	servicii intracomunitare cf. art.278 ALIN.(1) cu locul prestarii ï¿½n Romï¿½nia
 				#ENDIF
 				IF lnTipTvaCurent<3
 					DO CASE
@@ -1313,18 +1357,18 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 
 	lcInvoiceType = ""
 	*# -- InvoiceType
-	*„Cod tip factura” (BT-3) trebuie sa fie unul dintre urmatoarele coduri din lista de coduri UNTDID 1001: 
+	*ï¿½Cod tip facturaï¿½ (BT-3) trebuie sa fie unul dintre urmatoarele coduri din lista de coduri UNTDID 1001: 
 	* 380 (Factura), 
 	* 389 (Autofactura),
 	* 384 (Factura corectata),
 	* 381 (Nota de creditare),	&& Nu mai se foloseste
-	* 751 (Factura – informatii în scopuri contabile). 	
+	* 751 (Factura ï¿½ informatii ï¿½n scopuri contabile). 	
 	*     ( Factura achitata cu bonfiscal sau bonuri fiscale indiferent de valoare si daca au CIF sau NU si facturate)
 	*
-	*Am o întrebare legata de codul de facturare 751 care este în scopuri contabile. 
-	*Înteleg ca orice are legatura cu un bon fiscal, daca se emite factura pentru un bon fiscal ar trebui sa poarte acest cod, 
+	*Am o ï¿½ntrebare legata de codul de facturare 751 care este ï¿½n scopuri contabile. 
+	*ï¿½nteleg ca orice are legatura cu un bon fiscal, daca se emite factura pentru un bon fiscal ar trebui sa poarte acest cod, 
 	*indiferent daca valoarea achizitiei este mai mare de 100 euro?
-	*ANAF:	Codul 751 se foloseste în momentul în care au fost emise unul sau mai multe bonuri fiscale, 
+	*ANAF:	Codul 751 se foloseste ï¿½n momentul ï¿½n care au fost emise unul sau mai multe bonuri fiscale, 
 	*		indiferent daca e sub 100 euro si ulterior se emite si factura.
 	*
 	Do Case
@@ -1346,7 +1390,7 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 			lcInvoiceType = "380"
 		*
 	    Case (lcTipFactura=' ' .AND. mTiparit=1) .OR. lcTipFactura='f'
-	        lcInvoiceType = "751"			&& * 751 (Factura – informatii în scopuri contabile - Factura achita cu bonfiscal )
+	        lcInvoiceType = "751"			&& * 751 (Factura ï¿½ informatii ï¿½n scopuri contabile - Factura achita cu bonfiscal )
 
 		OtherWise
 			lcInvoiceType = "380"			&& Factura
@@ -1899,7 +1943,7 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 	*Denumire partener (BT-45);
 	*? Cod Fiscal (BT-48);
 	*? Nr. reg. comertului (BT-46);
-	* Adresa: localitate, judet, tara, strada completata atât pe sediul principal, cât si pe
+	* Adresa: localitate, judet, tara, strada completata atï¿½t pe sediul principal, cï¿½t si pe
 	*sediul de livrare, daca acesta difera. (BT-50, BT-52, BT-54, BT-55)
 
 	*https://docs.peppol.eu/poacc/billing/3.0/2024-Q2/syntax/ubl-invoice/cac-AccountingCustomerParty/cac-Party/cac-PartyIdentification/cbc-ID/
@@ -2826,7 +2870,7 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 				*			
 				*	Codurile NC sunt exclusiv pentru B2B.
 				*	Pentru B2G se folosesc codurile CPV.
-				*	Atât codurile NC cât si cele CPV sunt necesare si obligatorii la produse cu risc fiscal, în rest nu.			
+				*	Atï¿½t codurile NC cï¿½t si cele CPV sunt necesare si obligatorii la produse cu risc fiscal, ï¿½n rest nu.			
 				*
 				*---------------------------------------
 				* Produse cu risc fiscal OPANAF 12/2022.
@@ -2835,61 +2879,61 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 	Cele cinci categorii de produse sunt:
 
 	1. Legume, fructe, radacini si tuberculi alimentari, alte plante comestibile:
-	– COD NC de la 0701 – 0714 inclusiv Legume comestibile si anumite radacini si tuberculi.
-	– COD NC de la 0801 – 0814 inclusiv Fructe comestibile si fructe cu coaja lemnoasa; coaja de citrice sau de pepeni.
+	ï¿½ COD NC de la 0701 ï¿½ 0714 inclusiv Legume comestibile si anumite radacini si tuberculi.
+	ï¿½ COD NC de la 0801 ï¿½ 0814 inclusiv Fructe comestibile si fructe cu coaja lemnoasa; coaja de citrice sau de pepeni.
 
 	2. Bauturi alcoolice
-	– COD NC de la 2203 – 2208 inclusiv Bauturi, bauturi spirtoase.
+	ï¿½ COD NC de la 2203 ï¿½ 2208 inclusiv Bauturi, bauturi spirtoase.
 
 	3. Constructii noi
 	Constructiile noi sunt cele mentionate la art. 292 alin. (2) lit. f) din Codul fiscal. 
-	Adica cele a caror livrare este efectuata cel târziu pâna la data de 31 decembrie a anului urmator anului primei ocupari ori utilizari a constructiei sau a unei parti a acesteia, dupa caz. Inclusiv orice construc?ie transformata sau parte transformata a unei construc?ii, daca costul transformarii, exclusiv taxa, se ridica la minimum 50% din valoarea construc?iei sau a par?ii din construc?ie, exclusiv valoarea terenului, ulterior transformarii.
+	Adica cele a caror livrare este efectuata cel tï¿½rziu pï¿½na la data de 31 decembrie a anului urmator anului primei ocupari ori utilizari a constructiei sau a unei parti a acesteia, dupa caz. Inclusiv orice construc?ie transformata sau parte transformata a unei construc?ii, daca costul transformarii, exclusiv taxa, se ridica la minimum 50% din valoarea construc?iei sau a par?ii din construc?ie, exclusiv valoarea terenului, ulterior transformarii.
 
 	4. Produse minerale (apa minerala naturala, nisip si pietris).
-	– COD NC de la 2201 – 2202 inclusiv Ape, inclusiv ape minerale naturale sau artificiale si ape gazeificate care nu contin zahar sau alti îndulcitori si nici aromatizanti.
-	– COD NC 2505 – Nisipuri naturale de orice fel, chiar colorate.
-	– COD NC 2517 – Prundis, pietris, pietre concasate, din cele folosite în general ca agregate pentru betoane sau pietruirea drumurilor, pentru caile ferate sau alt balast, pietri? ?i silex, chiar tratate termic; macadam de zgura, de zgura metalurgica, de de?euri industriale similare, care con?ine chiar materiale cuprinse în prima parte a pozi?iei; macadam gudronat pentru ?osele; granule, sparturi ?i praf din pietre de la pozi?iile 2515 sau 2516, chiar tratate termic.
+	ï¿½ COD NC de la 2201 ï¿½ 2202 inclusiv Ape, inclusiv ape minerale naturale sau artificiale si ape gazeificate care nu contin zahar sau alti ï¿½ndulcitori si nici aromatizanti.
+	ï¿½ COD NC 2505 ï¿½ Nisipuri naturale de orice fel, chiar colorate.
+	ï¿½ COD NC 2517 ï¿½ Prundis, pietris, pietre concasate, din cele folosite ï¿½n general ca agregate pentru betoane sau pietruirea drumurilor, pentru caile ferate sau alt balast, pietri? ?i silex, chiar tratate termic; macadam de zgura, de zgura metalurgica, de de?euri industriale similare, care con?ine chiar materiale cuprinse ï¿½n prima parte a pozi?iei; macadam gudronat pentru ?osele; granule, sparturi ?i praf din pietre de la pozi?iile 2515 sau 2516, chiar tratate termic.
 
-	5. Îmbracaminte si încaltaminte (inclusiv accesorii)
+	5. ï¿½mbracaminte si ï¿½ncaltaminte (inclusiv accesorii)
 
-	– COD NC 6401 – Încaltaminte etansa cu talpi exterioare si fete din cauciuc sau din material plastic, a carei faza nu a fost nici fixata de talpa exterioara prin coasere sau prin nituri, cuie, ?uruburi, ?tifturi sau dispozitive similare, nici formata din diferite par?i asamblate prin procedee similare.
-	– COD NC 6402 – Alta încaltaminte cu talpi exterioare si fete din cauciuc sau din material plastic.
-	– COD NC 6403 – Încaltaminte cu talpi exterioare din cauciuc, material plastic, piele naturala sau reconstituita ?i cu fe?e din piele naturala.
-	– COD NC 6404 – Încaltaminte cu talpi exterioare din cauciuc, material plastic, piele naturala sau reconstituita ?i cu fe?e din materiale textile.
-	– COD NC 6405 – Alta încaltaminte.
-	– COD NC 6101 – Paltoane, scurte, pelerine, hanorace, bluzoane ?i articole similare, tricotate sau cro?etate, pentru barba?i sau pentru baie?i, cu excep?ia articolelor de la pozi?ia 6103.
-	– COD NC 6102 – Paltoane, scurte, pelerine, hanorace, bluzoane ?i articole similare, tricotate sau cro?etate, pentru femei sau fete, cu excep?ia articolelor de lapozi?ia 6104.
-	– COD NC 6103 – Costume sau compleuri, ansambluri, jachete, sacouri, pantaloni, salopete cu bretele, pantaloni scur?i ?i ?orturi (altele decât cele pentru baie), tricotate sau cro?etate, pentru barba?i sau baie?i.
-	– COD NC 6104 – Taioare, ansambluri, jachete, sacouri, rochii, fuste, fuste-pantalon, pantaloni, salopete cu bretele, pantaloni scur?i ?i ?orturi (altele decât cele de baie), tricotate sau cro?etate, pentru femei sau fete.
-	– COD NC 6105 – Cama?i ?i bluze, tricotate sau cro?etate, pentru barba?i sau baie?i.
-	– COD NC 6106 – Cama?i, bluze, bluze-cama?a, tricotate sau cro?etate, pentru femei sau fete.
-	– COD NC 6107 – Chilo?i, indispensabili, cama?i de noapte, pijamale, halate de baie, halate de casa ?i articole similare, tricotate sau cro?etate, pentru barba?i sau baie?i.
-	– COD NC 6108 – Combinezoane sau furouri, jupoane, chilo?i, cama?i de noapte, pijamale, dezabieuri, halate de baie, halate de casa ?i articole similare, tricotate sau cro?etate, pentru femei ?i fete.
-	– COD NC 6109 – Tricouri (T-shirts), bluze ?i maiouri de corp, tricotate sau cro?etate.
-	– COD NC 6110 – Jerseuri, pulovere, cardigane ?i articole similare, veste ?i articole similare, inclusiv tricotajele sub?iri care se poarta sub pulovere, tricotate sau cro?etate.
-	– COD NC 6111 – Îmbracaminte ?i accesorii de îmbracaminte, tricotate sau cro?etate, pentru sugari.
-	– COD NC 6112 – Treninguri, combinezoane ?i costume de schi ?i costume, chilo?i ?i slipuri de baie, tricotate sau cro?etate.
-	– COD NC 6113 – Îmbracaminte confec?ionata din materiale tricotate sau cro?etate de la pozi?iile 5903, 5906 sau 5907.
-	– COD NC 6114 – Alte articole de îmbracaminte din materiale tricotate sau cro?etate.
-	– COD NC 6115 – Ciorapi-chilot, dresuri, ciorapi, ?osete ?i alte articole similare, inclusiv ciorapii cu compresie progresiva (spre exemplu, pentru varice) ?i încal?aminte fara talpa aplicata, tricotate sau cro?etate.
-	– COD NC 6116 – Manu?i, mitene ?i manu?i cu un deget, tricotate sau cro?etate.
-	– COD NC 6117 – Alte accesorii confec?ionate de îmbracaminte, tricotate sau cro?etate; par?i de îmbracaminte sau accesorii de îmbracaminte, tricotate sau cro?etate.
-	– COD NC 6201 – Paltoane, scurte, pelerine, hanorace (inclusiv geci de ski), geci de vânt ?i alte articole similare, pentru barba?i sau baie?i, cu excep?ia articolelor de la pozi?ia 6203.
-	– COD NC 6202 – Paltoane, scurte, pelerine, hanorace (inclusiv geci de ski), geci de vânt ?i articole similare, pentru femei sau fete, cu excep?ia articolelor de la pozi?ia 6204.
-	– COD NC 6203 – Costume sau compleuri, ansambluri, jachete, sacouri, pantaloni, salopete cu bretele, pantaloni scur?i ?i ?orturi (altele decât cele pentru baie), pentru barba?i sau baie?i.
-	– COD NC 6204 – Taioare, ansambluri, jachete, sacouri, rochii, fuste, fuste-pantalon, pantaloni, salopete cu bretele, pantaloni scur?i ?i ?orturi (altele decât pentru baie), pentru femei ?i fete.
-	– COD NC 6205 – Cama?i ?i cama?i cu mâneca scurta pentru barba?i sau baie?i.
-	– COD NC 6206 – Cama?i, bluze, bluze-cama?i ?i cama?i cu mâneca scurta pentru femei sau fete.
-	– COD NC 6207 – Bluze si maiouri de corp, chilo?i, indispensabili, cama?i de noapte, pijamale, halate de baie, halate de casa ?i articole similare, pentru barba?i sau pentru baie?i.
-	– COD NC 6208 – Bluze de corp ?i cama?i de zi, combinezoane sau furouri, jupoane, chilo?i, cama?i de noapte, pijamale, neglijeuri, halate de baie, halate de casa ?i articole similare, pentru femei sau fete.
-	– COD NC 6209 – Îmbracaminte ?i accesorii de îmbracaminte pentru sugari.
-	– COD NC 6210 – Îmbracaminte confec?ionata din produsele de la pozi?iile 5602, 5603, 5903, 5906 sau 5907.
-	– COD NC 6211 – Îmbracaminte de sport (treninguri), combinezoane ?i costume de schi, costume, chilo?i ?i slipuri, de baie; alte articole de îmbracaminte.
-	– COD NC 6212 – Sutiene, brâuri, corsete, bretele, suspensoare, jartiere ?i articole similare ?i par?ile lor, chiar tricotate sau cro?etate.
-	– COD NC 6214 – ?aluri, e?arfe, fulare, mantile, voaluri, voalete ?i articole similare.
-	– COD NC 6215 – Cravate, papioane ?i fulare cravata.
-	– COD NC 6216 – Manu?i, mitene ?i manu?i cu un deget.
-	– COD NC 6217 – Alte accesorii de îmbracaminte confec?ionate; par?i de îmbracaminte sau de accesorii de îmbracaminte, altele decât cele de la pozi?ia 6212.
+	ï¿½ COD NC 6401 ï¿½ ï¿½ncaltaminte etansa cu talpi exterioare si fete din cauciuc sau din material plastic, a carei faza nu a fost nici fixata de talpa exterioara prin coasere sau prin nituri, cuie, ?uruburi, ?tifturi sau dispozitive similare, nici formata din diferite par?i asamblate prin procedee similare.
+	ï¿½ COD NC 6402 ï¿½ Alta ï¿½ncaltaminte cu talpi exterioare si fete din cauciuc sau din material plastic.
+	ï¿½ COD NC 6403 ï¿½ ï¿½ncaltaminte cu talpi exterioare din cauciuc, material plastic, piele naturala sau reconstituita ?i cu fe?e din piele naturala.
+	ï¿½ COD NC 6404 ï¿½ ï¿½ncaltaminte cu talpi exterioare din cauciuc, material plastic, piele naturala sau reconstituita ?i cu fe?e din materiale textile.
+	ï¿½ COD NC 6405 ï¿½ Alta ï¿½ncaltaminte.
+	ï¿½ COD NC 6101 ï¿½ Paltoane, scurte, pelerine, hanorace, bluzoane ?i articole similare, tricotate sau cro?etate, pentru barba?i sau pentru baie?i, cu excep?ia articolelor de la pozi?ia 6103.
+	ï¿½ COD NC 6102 ï¿½ Paltoane, scurte, pelerine, hanorace, bluzoane ?i articole similare, tricotate sau cro?etate, pentru femei sau fete, cu excep?ia articolelor de lapozi?ia 6104.
+	ï¿½ COD NC 6103 ï¿½ Costume sau compleuri, ansambluri, jachete, sacouri, pantaloni, salopete cu bretele, pantaloni scur?i ?i ?orturi (altele decï¿½t cele pentru baie), tricotate sau cro?etate, pentru barba?i sau baie?i.
+	ï¿½ COD NC 6104 ï¿½ Taioare, ansambluri, jachete, sacouri, rochii, fuste, fuste-pantalon, pantaloni, salopete cu bretele, pantaloni scur?i ?i ?orturi (altele decï¿½t cele de baie), tricotate sau cro?etate, pentru femei sau fete.
+	ï¿½ COD NC 6105 ï¿½ Cama?i ?i bluze, tricotate sau cro?etate, pentru barba?i sau baie?i.
+	ï¿½ COD NC 6106 ï¿½ Cama?i, bluze, bluze-cama?a, tricotate sau cro?etate, pentru femei sau fete.
+	ï¿½ COD NC 6107 ï¿½ Chilo?i, indispensabili, cama?i de noapte, pijamale, halate de baie, halate de casa ?i articole similare, tricotate sau cro?etate, pentru barba?i sau baie?i.
+	ï¿½ COD NC 6108 ï¿½ Combinezoane sau furouri, jupoane, chilo?i, cama?i de noapte, pijamale, dezabieuri, halate de baie, halate de casa ?i articole similare, tricotate sau cro?etate, pentru femei ?i fete.
+	ï¿½ COD NC 6109 ï¿½ Tricouri (T-shirts), bluze ?i maiouri de corp, tricotate sau cro?etate.
+	ï¿½ COD NC 6110 ï¿½ Jerseuri, pulovere, cardigane ?i articole similare, veste ?i articole similare, inclusiv tricotajele sub?iri care se poarta sub pulovere, tricotate sau cro?etate.
+	ï¿½ COD NC 6111 ï¿½ ï¿½mbracaminte ?i accesorii de ï¿½mbracaminte, tricotate sau cro?etate, pentru sugari.
+	ï¿½ COD NC 6112 ï¿½ Treninguri, combinezoane ?i costume de schi ?i costume, chilo?i ?i slipuri de baie, tricotate sau cro?etate.
+	ï¿½ COD NC 6113 ï¿½ ï¿½mbracaminte confec?ionata din materiale tricotate sau cro?etate de la pozi?iile 5903, 5906 sau 5907.
+	ï¿½ COD NC 6114 ï¿½ Alte articole de ï¿½mbracaminte din materiale tricotate sau cro?etate.
+	ï¿½ COD NC 6115 ï¿½ Ciorapi-chilot, dresuri, ciorapi, ?osete ?i alte articole similare, inclusiv ciorapii cu compresie progresiva (spre exemplu, pentru varice) ?i ï¿½ncal?aminte fara talpa aplicata, tricotate sau cro?etate.
+	ï¿½ COD NC 6116 ï¿½ Manu?i, mitene ?i manu?i cu un deget, tricotate sau cro?etate.
+	ï¿½ COD NC 6117 ï¿½ Alte accesorii confec?ionate de ï¿½mbracaminte, tricotate sau cro?etate; par?i de ï¿½mbracaminte sau accesorii de ï¿½mbracaminte, tricotate sau cro?etate.
+	ï¿½ COD NC 6201 ï¿½ Paltoane, scurte, pelerine, hanorace (inclusiv geci de ski), geci de vï¿½nt ?i alte articole similare, pentru barba?i sau baie?i, cu excep?ia articolelor de la pozi?ia 6203.
+	ï¿½ COD NC 6202 ï¿½ Paltoane, scurte, pelerine, hanorace (inclusiv geci de ski), geci de vï¿½nt ?i articole similare, pentru femei sau fete, cu excep?ia articolelor de la pozi?ia 6204.
+	ï¿½ COD NC 6203 ï¿½ Costume sau compleuri, ansambluri, jachete, sacouri, pantaloni, salopete cu bretele, pantaloni scur?i ?i ?orturi (altele decï¿½t cele pentru baie), pentru barba?i sau baie?i.
+	ï¿½ COD NC 6204 ï¿½ Taioare, ansambluri, jachete, sacouri, rochii, fuste, fuste-pantalon, pantaloni, salopete cu bretele, pantaloni scur?i ?i ?orturi (altele decï¿½t pentru baie), pentru femei ?i fete.
+	ï¿½ COD NC 6205 ï¿½ Cama?i ?i cama?i cu mï¿½neca scurta pentru barba?i sau baie?i.
+	ï¿½ COD NC 6206 ï¿½ Cama?i, bluze, bluze-cama?i ?i cama?i cu mï¿½neca scurta pentru femei sau fete.
+	ï¿½ COD NC 6207 ï¿½ Bluze si maiouri de corp, chilo?i, indispensabili, cama?i de noapte, pijamale, halate de baie, halate de casa ?i articole similare, pentru barba?i sau pentru baie?i.
+	ï¿½ COD NC 6208 ï¿½ Bluze de corp ?i cama?i de zi, combinezoane sau furouri, jupoane, chilo?i, cama?i de noapte, pijamale, neglijeuri, halate de baie, halate de casa ?i articole similare, pentru femei sau fete.
+	ï¿½ COD NC 6209 ï¿½ ï¿½mbracaminte ?i accesorii de ï¿½mbracaminte pentru sugari.
+	ï¿½ COD NC 6210 ï¿½ ï¿½mbracaminte confec?ionata din produsele de la pozi?iile 5602, 5603, 5903, 5906 sau 5907.
+	ï¿½ COD NC 6211 ï¿½ ï¿½mbracaminte de sport (treninguri), combinezoane ?i costume de schi, costume, chilo?i ?i slipuri, de baie; alte articole de ï¿½mbracaminte.
+	ï¿½ COD NC 6212 ï¿½ Sutiene, brï¿½uri, corsete, bretele, suspensoare, jartiere ?i articole similare ?i par?ile lor, chiar tricotate sau cro?etate.
+	ï¿½ COD NC 6214 ï¿½ ?aluri, e?arfe, fulare, mantile, voaluri, voalete ?i articole similare.
+	ï¿½ COD NC 6215 ï¿½ Cravate, papioane ?i fulare cravata.
+	ï¿½ COD NC 6216 ï¿½ Manu?i, mitene ?i manu?i cu un deget.
+	ï¿½ COD NC 6217 ï¿½ Alte accesorii de ï¿½mbracaminte confec?ionate; par?i de ï¿½mbracaminte sau de accesorii de ï¿½mbracaminte, altele decï¿½t cele de la pozi?ia 6212.
 
 	e-factura
 				#endif
@@ -3158,7 +3202,7 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 				IN SEL_EFACTURA
 			EndIf 
 			*
-			*MessageBox("Factura este valida. Poate fi încarcata prin SPV, la sectiunea 'Factura electronica' (optiunea de sintaxa XML - UBL).", 64, "Validare declaratie", 3000)
+			*MessageBox("Factura este valida. Poate fi ï¿½ncarcata prin SPV, la sectiunea 'Factura electronica' (optiunea de sintaxa XML - UBL).", 64, "Validare declaratie", 3000)
 			*
 			*	-	Daca transmite din Iesiri, Export, Vanzari 
 			*	Aliasul "IESIRI", "EXPORT" sau "DOCUM" este deschis
@@ -3237,7 +3281,7 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 						lcMsg2='Index incarcare:'+oReturn_eFactura_API_Upload.index_incarcare
 						MessageBox(;
 							"Factura: "+Chr(13)+lcNumarFactura+" din data de: "+DToC(ldData)+Chr(13)+;
-							"este valida si a fost încarcata prin SPV."+Chr(13)+lcMsg1+Chr(13)+lcMsg2, 64, "Validare declaratie";
+							"este valida si a fost ï¿½ncarcata prin SPV."+Chr(13)+lcMsg1+Chr(13)+lcMsg2, 64, "Validare declaratie";
 							, 3000)
 						*
 						If Used(lcAlias) And IsField('id_solicitare', lcAlias)
@@ -3331,12 +3375,12 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 				        	m.Raspuns = "Serverele ANAF nu raspund."+CHR(13)+"Incercati mai tarziu."
 						*
 						Case "Forbidden" $ m.lcXML_SPV_ERR .Or. ("403" $ m.lcXML_SPV_ERR .And. Len(m.lcXML_SPV_ERR < 30))
-							m.lcErr_SPV = "Nu aveti drepturi de încarcare pe acest cod fiscal sau tokenul ICAS pentru SPV este expirat. Reinoiti tokenul ICAS sau generati unul nou." + Chr(13) + m.lcXML_SPV_ERR
+							m.lcErr_SPV = "Nu aveti drepturi de ï¿½ncarcare pe acest cod fiscal sau tokenul ICAS pentru SPV este expirat. Reinoiti tokenul ICAS sau generati unul nou." + Chr(13) + m.lcXML_SPV_ERR
 					    *Case "The remote server returned an error:"$lcXML_SPV_ERR .AND. "(401)"$lcXML_SPV_ERR .AND. "Unauthorized."$lcXML_SPV_ERR
 					    *
 					    *Case "(401)"$lcXML_SPV_ERR
 					    Case "Unauthorized"$lcXML_SPV_ERR AND ["401"]$lcXML_SPV_ERR
-				        	lcErr_SPV = "Nu aveti drepturi de încarcare pe acest cod fiscal sau tokenul ICAS pentru SPV este expirat. Reinoiti tokenul ICAS sau generati unul nou."+CHR(13)+lcXML_SPV_ERR
+				        	lcErr_SPV = "Nu aveti drepturi de ï¿½ncarcare pe acest cod fiscal sau tokenul ICAS pentru SPV este expirat. Reinoiti tokenul ICAS sau generati unul nou."+CHR(13)+lcXML_SPV_ERR
 						*
 						Case "Nu aveti drept in SPV pentru CIF" $ m.lcXML_SPV_ERR
 							m.lcErr_SPV = "Nu aveti acces in SPV acum, pentru acest cod fiscal." + Chr(13) + "Daca inregistrarea in SPV a fost efectuata de curand, incercati mai tarziu sau luati legatura cu ANAF."
@@ -3363,10 +3407,10 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 					EndCase
 					*	
 					MessageBox("Factura: "+Chr(13)+lcNumarFactura+" din data de: "+DToC(ldData)+Chr(13)+;
-						"este valida dar NU a reusit încarcarea prin SPV."+Chr(13)+Chr(13)+;
+						"este valida dar NU a reusit ï¿½ncarcarea prin SPV."+Chr(13)+Chr(13)+;
 						'Mesaj eroare ANAF:' + Chr(13)+;
 						'[ ' + lcErr_SPV + ' ]' + Chr(13)+ Chr(13)+;
-						"Poate fi încarcata manual prin SPV, la sectiunea 'Factura electronica' (optiunea de sintaxa XML - UBL).";
+						"Poate fi ï¿½ncarcata manual prin SPV, la sectiunea 'Factura electronica' (optiunea de sintaxa XML - UBL).";
 						, 64, "Validare declaratie", 3000)
 					*
 					Set Step On
@@ -3385,7 +3429,7 @@ Procedure Create_XML_UBL_File_For_eFactura(tnRectificativa, tcNumeFisier, tcCale
 					"Factura: "+Chr(13)+lcNumarFactura+" din data de: "+DToC(ldData)+Chr(13)+;
 					"este valida."+Chr(13)+Chr(13)+;
 					"Fisierul XML pentru e-Factura a fost generat si salvat, dar nu a fost trimis in SPV."+Chr(13)+;
-					"Poate fi încarcata prin SPV, la sectiunea 'Factura electronica' (optiunea de sintaxa XML - UBL)."
+					"Poate fi ï¿½ncarcata prin SPV, la sectiunea 'Factura electronica' (optiunea de sintaxa XML - UBL)."
 				*	
 				If ICAS.oSettings.eFactura_Only_XML
 					*oWsShell = CreateObject("WScript.Shell")
@@ -4190,32 +4234,32 @@ Function GetSupplierCompanyLegalForm_Prefix()
 	https://static.anaf.ro/static/10/Anaf/AsistentaContribuabili_r/Nomenclator_forme_juridice.htm
 	
 		NOMENCLATORUL FORMELOR JURIDICE
-	(Utilizat la declaratiile de înregistrare)
+	(Utilizat la declaratiile de ï¿½nregistrare)
 	COD			DENUMIRE
 	AFJ			Alte forme juridice
-	ASF			Asociatie familialã
+	ASF			Asociatie familialï¿½
 	CON			Concesiune
-	CRL			Soc civilã profesionala cu pers. juridica si rãspundere limitata (SPRL)
-	INC			Închiriere
+	CRL			Soc civilï¿½ profesionala cu pers. juridica si rï¿½spundere limitata (SPRL)
+	INC			ï¿½nchiriere
 	LOC			Locatie de gestiune
-	OC1			Organizatie cooperatistã mestesugãreascã
-	OC2			Organizatie cooperatistã de consum
-	OC3			Organizatie cooperatistã de credit
-	PFA			Persoanã fizicã independentã
-	RA			Regie autonomã
-	SA			Societate comercialã pe actiuni
-	SCS			Societate comercialã în comanditã simplã
-	SNC			Societate comercialã în nume colectiv
+	OC1			Organizatie cooperatistï¿½ mestesugï¿½reascï¿½
+	OC2			Organizatie cooperatistï¿½ de consum
+	OC3			Organizatie cooperatistï¿½ de credit
+	PFA			Persoanï¿½ fizicï¿½ independentï¿½
+	RA			Regie autonomï¿½
+	SA			Societate comercialï¿½ pe actiuni
+	SCS			Societate comercialï¿½ ï¿½n comanditï¿½ simplï¿½
+	SNC			Societate comercialï¿½ ï¿½n nume colectiv
 	SPI			Societate profesionala practicieni in insolventa (SPPI)
-	SRL			Societate comercialã cu rãspundere limitatã
-	URL			Intreprindere profesionala unipersonala cu rãspundere limitata (IPURL)
+	SRL			Societate comercialï¿½ cu rï¿½spundere limitatï¿½
+	URL			Intreprindere profesionala unipersonala cu rï¿½spundere limitata (IPURL)
 
 	NOMENCLATORUL FORMELOR DE PROPRIETATE
 	COD			DENUMIRE
 	10			PROPRIETATE DE STAT
 	11			Regii autonome
 	12			Societati comerciale cu capital integral de stat
-	13			Alte unitati economice de stat netransformate în societati comerciale sau regii autonome
+	13			Alte unitati economice de stat netransformate ï¿½n societati comerciale sau regii autonome
 	14			Companii si societati nationale
 	20			PROPRIETATE MIXTA (cu capital de stat si privat)
 				PROPRIETATE MIXTA (cu capital de stat - sub 50%)
@@ -4227,20 +4271,20 @@ Function GetSupplierCompanyLegalForm_Prefix()
 	26			Societati comerciale cu capital de stat si privat autohton si strain
 	27			Societati comerciale cu capital de stat si privat autohton
 	28			Societati comerciale cu capital de stat si privat strain
-	30			PROPRIETATE INDIVIDUALA – PRIVATA (cu capital: privat autohton, privat autohton si strain, privat strain, societati agricole)
-	31			Societati comerciale în nume colectiv
-	32			Societati comerciale în comandita simpla
-	33			Societati comerciale în comandita pe actiuni
+	30			PROPRIETATE INDIVIDUALA ï¿½ PRIVATA (cu capital: privat autohton, privat autohton si strain, privat strain, societati agricole)
+	31			Societati comerciale ï¿½n nume colectiv
+	32			Societati comerciale ï¿½n comandita simpla
+	33			Societati comerciale ï¿½n comandita pe actiuni
 	34			Societati comerciale pe actiuni
 	35			Societati comerciale cu raspundere limitata
 	36			Societati agricole
-	37			Societati comerciale cu capital de stat, privatizate în cursul anului 2007
+	37			Societati comerciale cu capital de stat, privatizate ï¿½n cursul anului 2007
 	40			PROPRIETATE COOPERATISTA
 	41			Cooperative de consum
 	42			Cooperative mestesugaresti
 	43			Cooperative si asociatii agricole netransformate
 	44			Cooperative de credit
-	50			PROPRIETATE OBSTEASCA (societati comerciale apartinând organizatiilor si institutiilor politice si obstesti)
+	50			PROPRIETATE OBSTEASCA (societati comerciale apartinï¿½nd organizatiilor si institutiilor politice si obstesti)
 	#endif
 *	
 	Do Case
@@ -4249,7 +4293,7 @@ Function GetSupplierCompanyLegalForm_Prefix()
 		Case lcFormaProprietate='12'
 			lcPrefix='Societati comerciale cu capital integral de stat'
 		Case lcFormaProprietate='13'
-			lcPrefix='Alte unitati economice de stat netransformate în societati comerciale sau regii autonome'
+			lcPrefix='Alte unitati economice de stat netransformate ï¿½n societati comerciale sau regii autonome'
 		Case lcFormaProprietate='14'
 			lcPrefix='Companii si societati nationale'
 		Case lcFormaProprietate='15'
@@ -4285,7 +4329,7 @@ Function GetSupplierCompanyLegalForm_Prefix()
 		Case lcFormaProprietate='36'
 			lcPrefix='Societati agricole'
 		Case lcFormaProprietate='37'
-			lcPrefix='Societati comerciale cu capital de stat privatizate în cursul anului de raportare'
+			lcPrefix='Societati comerciale cu capital de stat privatizate ï¿½n cursul anului de raportare'
 		Case lcFormaProprietate='41'
 			lcPrefix='Cooperative de consum'
 		Case lcFormaProprietate='42'
@@ -4317,7 +4361,7 @@ Function GetSupplierCompanyLegalForm_Prefix()
 			Case " AFJ"$mDenSoc 
 				lcPrefix = 'Asociatie familiala'
 			Case " RA"$mDenSoc 
-				lcPrefix = 'Regie autonomã'
+				lcPrefix = 'Regie autonomï¿½'
 		EndCase
 		*
 	EndIf
@@ -5500,14 +5544,14 @@ Function Descarc_EFA_CLIENT_ZIP(toResponse, tcIndex, tcAlias, tlShowFolder, tcTi
 			*=================================================
 			lc_Mesaj_SPV = Get_Mesaj_SPV(tcIndex, tcAlias)			&& FACTURA PRIMITA,FACTURA TRIMISA,ERORI FACTURA,MESAJ CUMPARATOR PRIMIT / MESAJ CUMPARATOR TRANSMIS
 			*
-			*	Lista Mesaje – lista de raspunsuri disponibile pentru descarcare:
+			*	Lista Mesaje ï¿½ lista de raspunsuri disponibile pentru descarcare:
 			*
 			* Parametrii raspuns:
 			* - data_creare = data raspunsului
 			* - cif = cif-ul pentru care este raspunsul descarcabil
 			* - id_solicitare = indexul de incarcare primit la upload-ul fisierului
-			* - detalii – amanunte despre rãspuns
-			* - cif_emitent = cif-ul emitentului facturii (vânzãtor)
+			* - detalii ï¿½ amanunte despre rï¿½spuns
+			* - cif_emitent = cif-ul emitentului facturii (vï¿½nzï¿½tor)
 			* - cif_beneficiar = cif-ul beneficiarului facturii (cumparator)
 			* - tip:
 			* 	. FACTURA TRIMISA = raspuns cu factura originala si semnatura MF, transmis in urma transmiterii unei facturi, daca este validata de sistem
@@ -6319,7 +6363,7 @@ EndFunc
 *!*	            	lcMesajRaspuns = "Serverele ANAF nu raspund."+CHR(13)+"Incercati mai tarziu."+CHR(13)+lcMesajRaspuns
 *!*		        *
 *!*		        Case "Forbidden"$lcMesajRaspuns .OR. "403"$lcMesajRaspuns
-*!*	    	        lcMesajRaspuns = "Nu aveti drepturi de încarcare pe acest cod fiscal sau tokenul SPV a expirat. Generati alt token."+CHR(13)+lcMesajRaspuns
+*!*	    	        lcMesajRaspuns = "Nu aveti drepturi de ï¿½ncarcare pe acest cod fiscal sau tokenul SPV a expirat. Generati alt token."+CHR(13)+lcMesajRaspuns
 *!*				*
 *!*				Case lcMesajRaspuns<>"Operatia a fost anulata." .AND. lcMesajRaspuns<>"Nu exista mesaje"
 *!*	            	MessageBox(lcMesajRaspuns, 48, "Atentie...", 3000)
@@ -6794,14 +6838,14 @@ Procedure Chilkat_Diacritice (lcSursa)
 	loStringBuilder = CreateObject('Chilkat_9_5_0.StringBuilder')
 	loStringBuilder.LoadFile(lcSursa,"utf-8")
 
-	loStringBuilder.Replace("\u0102","A") &&&&& Ã
-	loStringBuilder.Replace("\u0103","a") &&&&& ã
+	loStringBuilder.Replace("\u0102","A") &&&&& ï¿½
+	loStringBuilder.Replace("\u0103","a") &&&&& ï¿½
 
-	loStringBuilder.Replace("\u00c2","A") &&&&& Â
-	loStringBuilder.Replace("\u00e2","a") &&&&& â
+	loStringBuilder.Replace("\u00c2","A") &&&&& ï¿½
+	loStringBuilder.Replace("\u00e2","a") &&&&& ï¿½
 
-	loStringBuilder.Replace("\u00ce","I") &&&&& Î
-	loStringBuilder.Replace("\u00ee","i") &&&&& î
+	loStringBuilder.Replace("\u00ce","I") &&&&& ï¿½
+	loStringBuilder.Replace("\u00ee","i") &&&&& ï¿½
 
 	loStringBuilder.Replace("\u0218","S") 
 	loStringBuilder.Replace("\u0219","s")
@@ -7421,7 +7465,7 @@ Procedure Get_Cursor_crsEFactura(tnIdUnicFactura, tcAlias)
 	*
 	UPDATE crsEFactura Set Is_Extern = .T. Where .NOT. IsNullOrEmpty(Tara) .AND. UPPER(Tara)<>"RO"
 	*Update crsEFactura Set Cod_Fiscal = Replicate('0', 13) Where IsNullOrEmpty(Cod_Fiscal) Or Not VerifCF(Cod_Fiscal) And Not ValidCNP(Cod_Fiscal)	&& 23.12.2024
-	* Daca este vorba despre o persoana fizica, CompanyID trebuie sa fie un CNP valid sau, în varianta anonimizata, 0000000000000.
+	* Daca este vorba despre o persoana fizica, CompanyID trebuie sa fie un CNP valid sau, ï¿½n varianta anonimizata, 0000000000000.
 	Update;
 		crsEFactura;
 	Set;
@@ -7570,7 +7614,7 @@ Procedure ReadErrorsFromZip(tcId_Solicitare, tcId_Descarcare, tcNumarDoc, tdData
 		*!*				* Citeste atributele radacinii 'header'
 		*!*				lc_Index_incarcare	= loNode.GetAttrValue("Index_incarcare")
 		*!*				lc_CIF_emitent		= loNode.GetAttrValue("Cif_emitent")
-		*!*				? "Index încarcare:",	lc_Index_Incarcare
+		*!*				? "Index ï¿½ncarcare:",	lc_Index_Incarcare
 		*!*				? "CIF emitent:",		lc_CIF_emitent
 		*!*				*lcMesajEroare = lcMesajEroare + Chr(13) +;
 		*!*					 "index_incarcare = "	+ lc_Index_incarcare + ", " +;
@@ -8655,7 +8699,7 @@ Function eFactura_Parse(toXml)
 		    i = i + 1
 		ENDDO		
 		m.oEFA.Note																= lcCbc_Note																										&& Comentarii Factura
-        ***	ll_IsTvaIncasare = "TVA"$UPPER(m.oEFA.Note) .AND. ("INCASARE"$UPPER(m.oEFA.Note) .OR. "ÎNCASARE"$UPPER(m.oEFA.Note))		
+        ***	ll_IsTvaIncasare = "TVA"$UPPER(m.oEFA.Note) .AND. ("INCASARE"$UPPER(m.oEFA.Note) .OR. "ï¿½NCASARE"$UPPER(m.oEFA.Note))		
 		m.oEFA.DocumentCurrencyCode												= .GetChildContent("*:DocumentCurrencyCode")																		&& Moneda
 		m.oEFA.TaxCurrencyCode													= .GetChildContent("*:TaxCurrencyCode")																			&& Moneda Tva
 		m.oEFA.AccountingCost													= .GetChildContent("*:AccountingCost")
@@ -9183,11 +9227,11 @@ Function Incarcare_EFA_Intrare(tcRecipisa)
 	If llResult
 		*
 		loXml = CreateObject("Chilkat_9_5_0.Xml")
-		* Încarcare document XML
+		* ï¿½ncarcare document XML
 		llSuccess = loXml.LoadXML(	CleanXMLPrefix( lcXmlFactura ) )
 		*
 		If llSuccess = 0
-			lcEroare_loXML = "Eroare la încarcarea documentului XML: "  +Chr(13)+ loXml.LastErrorText
+			lcEroare_loXML = "Eroare la ï¿½ncarcarea documentului XML: "  +Chr(13)+ loXml.LastErrorText
 			MessageBox(lcEroare_loXML, 16, "Eroare")
 			Select EFA_INTRARI
 			Loop
@@ -9613,11 +9657,11 @@ Function Incarcare_EFA_Iesire(tcRecipisa)
 	If llResult
 		*
 		loXml = CreateObject("Chilkat_9_5_0.Xml")
-		* Încarcare document XML
+		* ï¿½ncarcare document XML
 		llSuccess = loXml.LoadXML( CleanXMLPrefix( lcXmlFactura ) )
 		*
 		If llSuccess = 0
-			lcEroare_loXML = "Eroare la încarcarea documentului XML: "  +Chr(13)+ loXml.LastErrorText
+			lcEroare_loXML = "Eroare la ï¿½ncarcarea documentului XML: "  +Chr(13)+ loXml.LastErrorText
 			MessageBox(lcEroare_loXML, 16, "Eroare")
 			Select EFA_IESIRI
 			Loop
@@ -9950,14 +9994,14 @@ Procedure CreareCursoare_INTRARI()
 		*
 		*=================================================
 		
-			*	Lista Mesaje – lista de raspunsuri disponibile pentru descarcare:
+			*	Lista Mesaje ï¿½ lista de raspunsuri disponibile pentru descarcare:
 			*
 			* Parametrii raspuns:
 			* - data_creare = data raspunsului
 			* - cif					= cif-ul pentru care este raspunsul descarcabil
 			* - id_solicitare		= indexul de incarcare primit la upload-ul fisierului
-			* - detalii				– amanunte despre rãspuns
-			* - cif_emitent			= cif-ul emitentului facturii (vânzãtor)
+			* - detalii				ï¿½ amanunte despre rï¿½spuns
+			* - cif_emitent			= cif-ul emitentului facturii (vï¿½nzï¿½tor)
 			* - cif_beneficiar		= cif-ul beneficiarului facturii (cumparator)
 			* - tip:
 			* 	. FACTURA TRIMISA	= raspuns cu factura originala si semnatura MF, transmis in urma transmiterii unei facturi, daca este validata de sistem
@@ -10475,7 +10519,7 @@ Function GetCommontArticolIesireInfo(tcDenumireArticol)
 		Case 'subventii'		$m.lcDenumireArticol And 'calamitatai'					$m.lcDenumireArticol
 			m.lcContUZUALIesiri = "7417"
 		*
-		Case 'subventii'		$m.lcDenumireArticol And 'dobânda datorata'				$m.lcDenumireArticol
+		Case 'subventii'		$m.lcDenumireArticol And 'dobï¿½nda datorata'				$m.lcDenumireArticol
 			m.lcContUZUALIesiri = "7418"
 		*
 		Case 'subventii'		$m.lcDenumireArticol And 'altor cvenituri'				$m.lcDenumireArticol
@@ -10538,13 +10582,13 @@ Function GetCommontArticolIesireInfo(tcDenumireArticol)
 		Case 'investitii pe termen scurt cedate'$m.lcDenumireArticol
 			m.lcContUZUALIesiri = "7642"
 		*
-		Case 'monetare exprimate în valuta'$m.lcDenumireArticol
+		Case 'monetare exprimate ï¿½n valuta'$m.lcDenumireArticol
 			m.lcContUZUALIesiri = "7651"
 		*
-		Case 'investitia neta într-o entitate straina'$m.lcDenumireArticol
+		Case 'investitia neta ï¿½ntr-o entitate straina'$m.lcDenumireArticol
 			m.lcContUZUALIesiri = "7652"
 		*
-		Case 'Venituri din dobânzi'$m.lcDenumireArticol
+		Case 'Venituri din dobï¿½nzi'$m.lcDenumireArticol
 			m.lcContUZUALIesiri = "766"
 		*
 		Case 'sconturi'$			m.lcDenumireArticol
