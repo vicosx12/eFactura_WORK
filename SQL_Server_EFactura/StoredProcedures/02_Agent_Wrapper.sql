@@ -177,7 +177,8 @@ BEGIN
         
         IF @step = 'DESCARCARE' AND @ok = 1 AND @zip_base64 IS NOT NULL
         BEGIN
-            SET @sql = @sql + N', EFA_Zip_Content = CAST('''' AS XML).value(''xs:base64Binary(sql:variable("@zip_base64"))'', ''varbinary(max)'') '
+            -- Conversie base64 la varbinary folosind XML
+            SET @sql = @sql + N', EFA_Zip_Content = CAST(CAST(N'''' AS XML).value(''xs:base64Binary(sql:variable("@zip_base64"))'', ''varbinary(max)'') AS VARBINARY(MAX)) '
             SET @sql = @sql + N', EFA_Zip_FileName = @id_descarcare + ''.zip'' '
             SET @sql = @sql + N', EF_Data_Validare = SYSUTCDATETIME() '
         END

@@ -308,7 +308,7 @@ BEGIN
               AND LEN(RTRIM(Baza)) > 0
               AND EXISTS (
                   SELECT 1 
-                  FROM [' + @firme_db + N'].[dbo].[Configurari].[SystemParameters] sp
+                  FROM [' + @firme_db + N'].[Configurari].[SystemParameters] sp
                   WHERE sp.sKey = ''Send_Efactura''
                     AND sp.sValue = ''Da''
               )'

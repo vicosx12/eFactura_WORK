@@ -8,8 +8,9 @@
  *       Adaptează numele bazei de date la linia USE [NumeBaza]
  ******************************************************************************/
 
--- !!! IMPORTANT: Înlocuiește cu numele bazei tale de date !!!
-USE [NumeBazaDeDate]
+-- !!! IMPORTANT: Înlocuiește [__NUMELE_BAZEI_DE_DATE__] cu numele bazei tale de date !!!
+-- Exemplu: USE [ExpertSoftwareCompany]
+USE [__NUMELE_BAZEI_DE_DATE__]
 GO
 
 PRINT 'Procesare bază de date: ' + DB_NAME()

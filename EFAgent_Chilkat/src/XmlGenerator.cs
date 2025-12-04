@@ -53,9 +53,23 @@ namespace EFAgent
 
         private async Task<InvoiceData?> FetchInvoiceDataAsync(CommandContext context)
         {
+            // Validate database and table names against whitelist
+            var allowedTables = new[] { "Iesiri", "Export" };
+            if (!allowedTables.Contains(context.TableName))
+            {
+                throw new ArgumentException($"Invalid table name: {context.TableName}");
+            }
+
+            // Validate database name (basic alphanumeric + underscore check)
+            if (!System.Text.RegularExpressions.Regex.IsMatch(context.Database, @"^[a-zA-Z0-9_]+$"))
+            {
+                throw new ArgumentException($"Invalid database name: {context.Database}");
+            }
+
             using var conn = new SqlConnection(context.ConnectionString);
             await conn.OpenAsync();
 
+            // Use parameterized query with validated identifiers
             var query = $@"
                 SELECT 
                     Nir, BT_11, BT_13, DataDoc,
