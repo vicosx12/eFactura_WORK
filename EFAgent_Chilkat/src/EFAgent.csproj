@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>EFAgent</RootNamespace>
+    <AssemblyName>EFAgent</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>1.2.0</Version>
+    <Authors>vicosx12</Authors>
+    <Company>Expert Software Company</Company>
+    <Product>EFAgent - RO e-Factura Automation (PRODUCTION READY)</Product>
+    <Description>Production-ready utility for Romanian ANAF e-Factura automation with Chilkat</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="config\settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- 
+    ⚠️ PRODUCȚIE: Chilkat DLL trebuie instalat manual
+    
+    Pași pentru deployment producție:
+    1. Cumpără licență de la: https://www.chilkatsoft.com/purchase.asp
+    2. Download DLL pentru .NET 6.0: https://www.chilkatsoft.com/downloads.asp
+    3. Adaugă referința mai jos și decomentează:
+    
+    <ItemGroup>
+      <Reference Include="ChilkatDotNet6">
+        <HintPath>C:\Chilkat\ChilkatDotNet6.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+    
+    4. În Operations.cs, decomentează toate secțiunile marcate cu:
+       /* PRODUCȚIE: Uncomment și configurează Chilkat ... */
+    
+    5. Configurează credențiale OAuth2 reale în config/settings.json
+    
+    Consultă: PRODUCTION_DEPLOYMENT_GUIDE.md pentru detalii complete
+  -->
+
+</Project>

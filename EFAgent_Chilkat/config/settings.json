@@ -1,0 +1,18 @@
+{
+  "oauth2": {
+    "clientId": "YOUR_CLIENT_ID_HERE",
+    "clientSecret": "YOUR_CLIENT_SECRET_HERE",
+    "tokenUrl": "https://logincert.anaf.ro/anaf-oauth2/v1/token",
+    "tokenStore": "C:\\EFAgent\\tokens",
+    "refreshBeforeExpiry": 300
+  },
+  "endpoints": {
+    "prod": "https://api.anaf.ro/prod/FCTEL/rest/",
+    "test": "https://api.anaf.ro/test/FCTEL/rest/",
+    "oauth2Prod": "https://logincert.anaf.ro/anaf-oauth2/v1/token",
+    "oauth2Test": "https://logincert.anaf.ro/anaf-oauth2/v1/token"
+  },
+  "xsdSchemaPath": "C:\\EFAgent\\schemas\\UBL-Invoice-2.1.xsd",
+  "maxRetries": 3,
+  "retryDelaySeconds": 30
+}
