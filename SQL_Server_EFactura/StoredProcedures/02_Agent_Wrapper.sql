@@ -265,20 +265,17 @@ GO
  * Test funcționalitate
  ******************************************************************************/
 
--- Test parsing JSON (SQL Server 2012 compatible)
-DECLARE @TestJson NVARCHAR(MAX) = N'{
-    "ok": true,
-    "step": "upload",
-    "http_status": 200,
-    "anaf_status": "ACCEPTED",
-    "id_solicitare": "ABC1234567",
-    "id_descarcare": "DEF7890123",
-    "recipisa": null,
-    "message": "Factura transmisă cu succes",
-    "zip_base64": null
-}'
+/*******************************************************************************
+ * Instalare completă
+ * 
+ * NOTĂ PRODUCȚIE: Testele au fost eliminate pentru deployment producție.
+ * Pentru testare, consultă documentația din SQL_Server_EFactura/Documentation/
+ ******************************************************************************/
 
-PRINT 'Test JSON format valid: ' + CASE WHEN LEFT(LTRIM(@TestJson), 1) = '{' THEN 'DA' ELSE 'NU' END
-PRINT 'Test parsing: id_solicitare = ' + dbo.EFA_ParseJsonValue(@TestJson, 'id_solicitare')
-PRINT 'Test parsing: ok = ' + dbo.EFA_ParseJsonValue(@TestJson, 'ok')
+PRINT ''
+PRINT '========================================='
+PRINT 'Proceduri Agent Wrapper instalate cu succes!'
+PRINT '- EFA_InvokeAgent'
+PRINT '- EFA_UpdateFromResponse'
+PRINT '========================================='
 GO

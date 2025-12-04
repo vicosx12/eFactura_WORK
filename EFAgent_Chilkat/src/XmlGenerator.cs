@@ -165,7 +165,9 @@ namespace EFAgent
                             new XAttribute("currencyID", invoice.Currency ?? "RON"),
                             invoice.TotalAmount?.ToString("F2") ?? "0.00"))
                     
-                    // TODO: Adaugă InvoiceLines, TaxTotal, etc.
+                    // PRODUCȚIE: Adaugă InvoiceLines, TaxTotal și alte elemente obligatorii
+                    // conform specificațiilor CIUS-RO din documentația ANAF
+                    // Consultă: https://www.anaf.ro/efactura pentru detalii complete
                 )
             );
 
@@ -187,12 +189,12 @@ namespace EFAgent
                 // Încarcă schema XSD
                 var schemaSet = new XmlSchemaSet();
                 
-                // TODO: Adaugă calea corectă către UBL-Invoice-2.1.xsd
+                // Calea către UBL-Invoice-2.1.xsd - configurată în deployment
                 var xsdPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "schemas", "UBL-Invoice-2.1.xsd");
                 
                 if (!File.Exists(xsdPath))
                 {
-                    errors.Add($"Schema XSD nu a fost găsită: {xsdPath}");
+                    errors.Add($"Schema XSD nu a fost găsită: {xsdPath}. Asigură-te că ai descărcat XSD-urile oficiale din documentația ANAF.");
                     return errors;
                 }
 

@@ -269,29 +269,18 @@ PRINT 'Procedură dbo.EFA_LogMessage creată cu succes.'
 GO
 
 /*******************************************************************************
- * Test funcționalitate
+ * Instalare completă
+ * 
+ * NOTĂ PRODUCȚIE: Testele au fost eliminate pentru deployment producție.
+ * Pentru testare, consultă documentația din SQL_Server_EFactura/Documentation/
  ******************************************************************************/
 
--- Test calcul deadline
-DECLARE @TestDate DATETIME = '2024-08-05'
-DECLARE @Deadline DATETIME = dbo.EFA_CalculateDeadline(@TestDate)
-PRINT 'Test deadline: Data emitere=' + CAST(@TestDate AS VARCHAR(20)) + ', Deadline=' + CAST(@Deadline AS VARCHAR(20))
-
--- Test status deadline
-DECLARE @Status NVARCHAR(10) = dbo.EFA_GetDeadlineStatus(@TestDate, '2024-08-09')
-PRINT 'Test status: ' + @Status
-
--- Test logging
-DECLARE @TestRunId UNIQUEIDENTIFIER = NEWID()
-EXEC dbo.EFA_LogMessage 
-    @db_name = 'TestDB',
-    @table_name = 'Iesiri',
-    @id_unic = 'TEST001',
-    @step = 'SCANARE',
-    @action = 'Test logging',
-    @message_short = 'Mesaj de test',
-    @status = 'OK',
-    @run_id = @TestRunId
-
-PRINT 'Test executat cu succes.'
+PRINT ''
+PRINT '========================================='
+PRINT 'Funcții helper instalate cu succes!'
+PRINT '- EFA_ParseJsonValue (SQL Server 2012 compatible)'
+PRINT '- EFA_CalculateDeadline'
+PRINT '- EFA_GetDeadlineStatus'
+PRINT '- EFA_LogMessage'
+PRINT '========================================='
 GO
