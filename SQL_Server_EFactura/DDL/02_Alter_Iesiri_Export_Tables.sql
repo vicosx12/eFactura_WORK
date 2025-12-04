@@ -13,6 +13,14 @@
 USE [__NUMELE_BAZEI_DE_DATE__]
 GO
 
+-- Verificare că placeholder-ul a fost înlocuit
+IF DB_NAME() = '__NUMELE_BAZEI_DE_DATE__'
+BEGIN
+    RAISERROR('EROARE: Trebuie să înlocuiești __NUMELE_BAZEI_DE_DATE__ cu numele real al bazei de date!', 16, 1)
+    RETURN
+END
+GO
+
 PRINT 'Procesare bază de date: ' + DB_NAME()
 GO
 
