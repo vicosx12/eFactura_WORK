@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>EFAgent</RootNamespace>
+    <AssemblyName>EFAgent</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <Authors>vicosx12</Authors>
+    <Company>Expert Software Company</Company>
+    <Product>EFAgent - RO e-Factura Automation</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="config\settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- 
+    NOTĂ: Chilkat trebuie instalat manual
+    Download de la: https://www.chilkatsoft.com/downloads.asp
+    Adaugă referința după instalare:
+    <ItemGroup>
+      <Reference Include="ChilkatDotNet48">
+        <HintPath>C:\Chilkat\ChilkatDotNet48.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+  -->
+
+</Project>
