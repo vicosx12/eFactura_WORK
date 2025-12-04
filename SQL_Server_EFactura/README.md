@@ -73,11 +73,13 @@ eFactura_WORK/
 ## Cerințe
 
 ### Software
-- **SQL Server** 2016+ (2019+ recomandat)
+- **SQL Server** 2012 SP1+ (2014+ recomandat, 2019+ optimal)
 - **SQL Server Agent** (activat)
 - **.NET 6.0 SDK** sau mai nou
 - **Chilkat Library** cu licență validă
 - **Visual Studio** 2022 sau VS Code (pentru compilare)
+
+**NOTĂ IMPORTANTĂ:** Această versiune este compatibilă cu **SQL Server 2012 SP1+**. Folosește implementări custom pentru funcționalitate JSON (ISJSON, JSON_VALUE, STRING_AGG) care au fost introduse nativ în SQL Server 2016+.
 
 ### Credențiale
 - **Client ID** și **Client Secret** pentru OAuth2 ANAF

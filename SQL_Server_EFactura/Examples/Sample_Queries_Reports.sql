@@ -139,12 +139,20 @@ ORDER BY log_dt_utc ASC
 GO
 
 -- 2.3 Erori pe Categorie (ultimele 24h)
+-- SQL Server 2012 compatible: folosește XML PATH pentru concatenare
 SELECT 
     step AS Pas,
     COUNT(*) AS NumarErori,
     COUNT(DISTINCT id_unic) AS FacturiAfectate,
-    STRING_AGG(DISTINCT message_short, '; ') AS MesajeUnice
-FROM efactura_logger
+    STUFF((
+        SELECT DISTINCT '; ' + message_short
+        FROM efactura_logger e2
+        WHERE e2.step = e1.step
+          AND e2.status = 'ERR'
+          AND e2.log_dt_utc > DATEADD(HOUR, -24, GETUTCDATE())
+        FOR XML PATH(''), TYPE
+    ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS MesajeUnice
+FROM efactura_logger e1
 WHERE status = 'ERR'
   AND log_dt_utc > DATEADD(HOUR, -24, GETUTCDATE())
 GROUP BY step

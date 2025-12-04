@@ -2,7 +2,9 @@
  * Script: 02_Alter_Iesiri_Export_Tables.sql
  * Descriere: Adaugă coloane de tracking pentru RO e-Factura în Iesiri și Export
  * Data: 2025-12-04
- * Versiune: 1.0
+ * Versiune: 1.1 (SQL Server 2012 Compatible)
+ * 
+ * COMPATIBILITATE: SQL Server 2012 SP1+
  * 
  * NOTĂ: Acest script trebuie rulat pe FIECARE bază de date care conține Iesiri/Export
  *       Adaptează numele bazei de date la linia USE [NumeBaza]

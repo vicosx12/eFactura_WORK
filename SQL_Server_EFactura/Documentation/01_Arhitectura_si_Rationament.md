@@ -1,9 +1,14 @@
 # Arhitectură și Raționament: Automatizare RO e-Factura din SQL Server
 
+**Versiune:** 1.1 (SQL Server 2012 Compatible)  
+**Compatibilitate:** SQL Server 2012 SP1+, 2014, 2016, 2017, 2019, 2022
+
 ## 1. Prezentare Generală
 
 ### 1.1 Obiectiv
 Soluție robustă, idempotentă și ușor de operat pentru transmiterea automată a facturilor către RO e-Factura (ANAF) direct din Microsoft SQL Server, folosind biblioteca Chilkat invocată din T-SQL.
+
+**🔧 Compatibilitate SQL Server 2012:** Soluția include implementări custom pentru funcționalitate JSON și concatenare string-uri, compatibile cu SQL Server 2012 SP1+, eliminând dependența de funcții native introduse în SQL Server 2016+ (JSON_VALUE, ISJSON, STRING_AGG).
 
 ### 1.2 Componente Principale
 1. **Baza de date SQL Server** - Stocare date și orchestrare

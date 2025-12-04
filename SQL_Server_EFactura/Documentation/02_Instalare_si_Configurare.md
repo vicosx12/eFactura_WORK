@@ -3,11 +3,14 @@
 ## 1. Cerințe Preliminare
 
 ### 1.1 Software
-- **SQL Server**: 2016 sau mai nou (2019+ recomandat)
+- **SQL Server**: 2012 SP1+ sau mai nou (2014+ recomandat, 2019+ optimal)
 - **SQL Server Agent**: Activat și rulând
 - **.NET SDK**: 6.0 sau mai nou (pentru compilare EFAgent)
 - **Chilkat Library**: Licență validă și DLL instalat
 - **Visual Studio**: 2022 sau VS Code (opțional, pentru dezvoltare)
+
+**⚠️ NOTĂ IMPORTANTĂ - Compatibilitate SQL Server 2012:**
+Această versiune este compatibilă cu **SQL Server 2012 SP1+**. Soluția include implementări custom pentru funcționalitate JSON (parsare, validare) și concatenare string-uri, care au fost introduse nativ în SQL Server 2016+. Funcția `dbo.EFA_ParseJsonValue` înlocuiește `JSON_VALUE()`, iar concatenarea XML PATH înlocuiește `STRING_AGG()`.
 
 ### 1.2 Permisiuni
 - Acces **sysadmin** pe SQL Server (pentru instalare)

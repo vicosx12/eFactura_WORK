@@ -130,8 +130,8 @@ BEGIN
                     @step = 'GENERARE',
                     @run_id = @run_id
                 
-                -- Verifică dacă generarea a reușit
-                SELECT @success = CAST(JSON_VALUE(@json_out, '$.ok') AS BIT)
+                -- Verifică dacă generarea a reușit (SQL Server 2012 compatible)
+                SELECT @success = CASE WHEN dbo.EFA_ParseJsonValue(@json_out, 'ok') = 'true' THEN 1 ELSE 0 END
                 
                 IF @success = 0
                 BEGIN
@@ -171,8 +171,8 @@ BEGIN
                     @step = 'TRANSMITERE',
                     @run_id = @run_id
                 
-                SELECT @success = CAST(JSON_VALUE(@json_out, '$.ok') AS BIT)
-                SELECT @id_descarcare = JSON_VALUE(@json_out, '$.id_descarcare')
+                SELECT @success = CASE WHEN dbo.EFA_ParseJsonValue(@json_out, 'ok') = 'true' THEN 1 ELSE 0 END
+                SELECT @id_descarcare = dbo.EFA_ParseJsonValue(@json_out, 'id_descarcare')
                 
                 IF @success = 0
                 BEGIN

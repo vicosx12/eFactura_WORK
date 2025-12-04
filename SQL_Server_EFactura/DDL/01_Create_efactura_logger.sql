@@ -2,7 +2,9 @@
  * Script: 01_Create_efactura_logger.sql
  * Descriere: Creare tabelă centrală de logging pentru RO e-Factura
  * Data: 2025-12-04
- * Versiune: 1.0
+ * Versiune: 1.1 (SQL Server 2012 Compatible)
+ * 
+ * COMPATIBILITATE: SQL Server 2012 SP1+
  ******************************************************************************/
 
 USE [master]

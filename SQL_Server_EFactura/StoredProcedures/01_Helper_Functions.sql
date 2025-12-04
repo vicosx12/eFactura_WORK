@@ -1,4 +1,96 @@
 /*******************************************************************************
+ * Helper Functions for RO e-Factura Automation
+ * SQL Server 2012 Compatible Version
+ * Data: 2025-12-04
+ * Versiune: 1.1 (SQL Server 2012 compatibility)
+ ******************************************************************************/
+
+USE [master]
+GO
+
+/*******************************************************************************
+ * Function: dbo.EFA_ParseJsonValue
+ * Descriere: Extrage o valoare simplă dintr-un JSON string (SQL Server 2012 compatible)
+ * Data: 2025-12-04
+ * Versiune: 1.0
+ *
+ * NOTĂ: Aceasta este o implementare simplificată pentru SQL Server 2012.
+ *       Pentru JSON complex, considerați upgrade la SQL Server 2016+
+ ******************************************************************************/
+
+IF EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[EFA_ParseJsonValue]') AND type = 'FN')
+    DROP FUNCTION [dbo].[EFA_ParseJsonValue]
+GO
+
+CREATE FUNCTION [dbo].[EFA_ParseJsonValue]
+(
+    @json NVARCHAR(MAX),
+    @key NVARCHAR(100)
+)
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    DECLARE @value NVARCHAR(MAX)
+    DECLARE @startPos INT
+    DECLARE @endPos INT
+    DECLARE @searchKey NVARCHAR(110)
+    
+    -- Construiește pattern-ul de căutare: "key":"value" sau "key":value sau "key":null
+    SET @searchKey = '"' + @key + '":'
+    SET @startPos = CHARINDEX(@searchKey, @json)
+    
+    IF @startPos = 0
+        RETURN NULL
+    
+    -- Treci peste cheie și ":"
+    SET @startPos = @startPos + LEN(@searchKey)
+    
+    -- Sări peste spații
+    WHILE SUBSTRING(@json, @startPos, 1) IN (' ', CHAR(9), CHAR(10), CHAR(13))
+        SET @startPos = @startPos + 1
+    
+    -- Verifică dacă valoarea este null
+    IF SUBSTRING(@json, @startPos, 4) = 'null'
+        RETURN NULL
+    
+    -- Verifică dacă valoarea este string (începe cu ")
+    IF SUBSTRING(@json, @startPos, 1) = '"'
+    BEGIN
+        SET @startPos = @startPos + 1
+        SET @endPos = CHARINDEX('"', @json, @startPos)
+        
+        -- Găsește închiderea string-ului (ține cont de escape-uri)
+        WHILE @endPos > 0 AND SUBSTRING(@json, @endPos - 1, 1) = '\'
+        BEGIN
+            SET @endPos = CHARINDEX('"', @json, @endPos + 1)
+        END
+        
+        IF @endPos > 0
+            SET @value = SUBSTRING(@json, @startPos, @endPos - @startPos)
+    END
+    ELSE
+    BEGIN
+        -- Valoare non-string (număr, boolean)
+        -- Găsește primul separator: , } ] sau spațiu/newline
+        SET @endPos = @startPos
+        WHILE @endPos <= LEN(@json) 
+              AND SUBSTRING(@json, @endPos, 1) NOT IN (',', '}', ']', ' ', CHAR(9), CHAR(10), CHAR(13))
+        BEGIN
+            SET @endPos = @endPos + 1
+        END
+        
+        SET @value = SUBSTRING(@json, @startPos, @endPos - @startPos)
+        SET @value = RTRIM(LTRIM(@value))
+    END
+    
+    RETURN @value
+END
+GO
+
+PRINT 'Funcție dbo.EFA_ParseJsonValue creată cu succes (SQL Server 2012 compatible).'
+GO
+
+/*******************************************************************************
  * Stored Procedure: dbo.EFA_CalculateDeadline
  * Descriere: Calculează deadline-ul legal pentru transmitere e-Factura (T+5 zile)
  * Data: 2025-12-04

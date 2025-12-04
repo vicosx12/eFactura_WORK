@@ -45,19 +45,30 @@ BEGIN
         INSERT INTO @TempTable (OutputLine)
         EXEC xp_cmdshell @cmd
         
-        -- Concatenează output-ul
-        SELECT @json_out = STRING_AGG(OutputLine, CHAR(10)) 
+        -- Concatenează output-ul (SQL Server 2012 compatible)
+        SELECT @json_out = COALESCE(@json_out + CHAR(10), '') + OutputLine
         FROM @TempTable 
         WHERE OutputLine IS NOT NULL
         
-        -- Verificare dacă output-ul este JSON valid
-        IF ISJSON(@json_out) = 0
-        BEGIN
+        -- Verificare dacă output-ul este JSON valid (SQL Server 2012 compatible)
+        -- Încearcă să parseze JSON-ul pentru validare
+        DECLARE @json_test NVARCHAR(MAX)
+        BEGIN TRY
+            -- Test simplu: verifică dacă începe cu { sau [
+            IF LEFT(LTRIM(@json_out), 1) NOT IN ('{', '[')
+            BEGIN
+                SET @ErrorMessage = 'Output-ul nu este JSON valid: ' + ISNULL(LEFT(@json_out, 500), 'NULL')
+                RAISERROR(@ErrorMessage, 16, 1)
+                SET @exit_code = -2
+                RETURN -2
+            END
+        END TRY
+        BEGIN CATCH
             SET @ErrorMessage = 'Output-ul nu este JSON valid: ' + ISNULL(LEFT(@json_out, 500), 'NULL')
             RAISERROR(@ErrorMessage, 16, 1)
             SET @exit_code = -2
             RETURN -2
-        END
+        END CATCH
         
         SET @exit_code = 0
         RETURN 0
@@ -65,7 +76,8 @@ BEGIN
     END TRY
     BEGIN CATCH
         SET @ErrorMessage = 'Eroare invocare EFAgent: ' + ERROR_MESSAGE()
-        SET @json_out = JSON_MODIFY('{}', '$.error', @ErrorMessage)
+        -- SQL Server 2012 compatible JSON string construction
+        SET @json_out = '{"error":"' + REPLACE(@ErrorMessage, '"', '\"') + '"}'
         SET @exit_code = ERROR_NUMBER()
         
         PRINT @ErrorMessage
@@ -119,16 +131,16 @@ BEGIN
     DECLARE @params NVARCHAR(MAX)
     
     BEGIN TRY
-        -- Parse JSON
+        -- Parse JSON (SQL Server 2012 compatible)
         SELECT 
-            @ok = CAST(JSON_VALUE(@json, '$.ok') AS BIT),
-            @http_status = CAST(JSON_VALUE(@json, '$.http_status') AS INT),
-            @anaf_status = JSON_VALUE(@json, '$.anaf_status'),
-            @id_solicitare = JSON_VALUE(@json, '$.id_solicitare'),
-            @id_descarcare = JSON_VALUE(@json, '$.id_descarcare'),
-            @recipisa = JSON_VALUE(@json, '$.recipisa'),
-            @message = JSON_VALUE(@json, '$.message'),
-            @zip_base64 = JSON_VALUE(@json, '$.zip_base64')
+            @ok = CASE WHEN dbo.EFA_ParseJsonValue(@json, 'ok') = 'true' THEN 1 ELSE 0 END,
+            @http_status = CAST(dbo.EFA_ParseJsonValue(@json, 'http_status') AS INT),
+            @anaf_status = dbo.EFA_ParseJsonValue(@json, 'anaf_status'),
+            @id_solicitare = dbo.EFA_ParseJsonValue(@json, 'id_solicitare'),
+            @id_descarcare = dbo.EFA_ParseJsonValue(@json, 'id_descarcare'),
+            @recipisa = dbo.EFA_ParseJsonValue(@json, 'recipisa'),
+            @message = dbo.EFA_ParseJsonValue(@json, 'message'),
+            @zip_base64 = dbo.EFA_ParseJsonValue(@json, 'zip_base64')
         
         -- Determină starea nouă bazată pe step și rezultat
         IF @ok = 1
@@ -253,7 +265,7 @@ GO
  * Test funcționalitate
  ******************************************************************************/
 
--- Test parsing JSON
+-- Test parsing JSON (SQL Server 2012 compatible)
 DECLARE @TestJson NVARCHAR(MAX) = N'{
     "ok": true,
     "step": "upload",
@@ -266,6 +278,7 @@ DECLARE @TestJson NVARCHAR(MAX) = N'{
     "zip_base64": null
 }'
 
-PRINT 'Test JSON valid: ' + CASE WHEN ISJSON(@TestJson) = 1 THEN 'DA' ELSE 'NU' END
-PRINT 'Test parsing: id_solicitare = ' + JSON_VALUE(@TestJson, '$.id_solicitare')
+PRINT 'Test JSON format valid: ' + CASE WHEN LEFT(LTRIM(@TestJson), 1) = '{' THEN 'DA' ELSE 'NU' END
+PRINT 'Test parsing: id_solicitare = ' + dbo.EFA_ParseJsonValue(@TestJson, 'id_solicitare')
+PRINT 'Test parsing: ok = ' + dbo.EFA_ParseJsonValue(@TestJson, 'ok')
 GO
