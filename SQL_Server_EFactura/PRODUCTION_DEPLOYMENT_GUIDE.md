@@ -1,7 +1,7 @@
 # Ghid de Deployment Producție: RO e-Factura Automation
 
 ## Versiune: 1.2 - PRODUCTION READY
-**Data:** 2025-12-04  
+**Data:** 2024-12-04  
 **Compatibilitate:** SQL Server 2012 SP1+
 
 ---

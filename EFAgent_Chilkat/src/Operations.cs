@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Net.Http;
 using System.Text;
 using Newtonsoft.Json;
 
@@ -114,7 +115,7 @@ namespace EFAgent
                 oauth2.ClientId = _settings.OAuth2.ClientId;
                 oauth2.ClientSecret = _settings.OAuth2.ClientSecret;
                 
-                var success = oauth2.UseClientCredentials();
+                var success = oauth2.ClientCredentials();
                 if (!success)
                 {
                     throw new Exception($"OAuth2 failed: {oauth2.LastErrorText}");
@@ -366,14 +367,14 @@ namespace EFAgent
                 var http = new Chilkat.Http();
                 http.AuthToken = token;
                 
-                var zipData = http.QuickGetBd(downloadUrl);
+                var zipData = http.QuickGetBytes(downloadUrl);
                 
-                if (zipData == null)
+                if (zipData == null || zipData.Length == 0)
                 {
                     throw new Exception($"Download failed: {http.LastErrorText}");
                 }
                 
-                return zipData.GetEncoded("base64");
+                return Convert.ToBase64String(zipData);
                 */
 
                 await Task.Delay(100);
