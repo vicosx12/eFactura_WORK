@@ -72,7 +72,9 @@ ENDPROC
 * Procedură: SetupPaths
 *====================================================================
 PROCEDURE SetupPaths()
-    LOCAL lcBasePath
+    LOCAL lcBasePath, llSuccess
+    
+    llSuccess = .F.
     
     TRY
         * Calea de bază
@@ -83,12 +85,14 @@ PROCEDURE SetupPaths()
         SET PROCEDURE TO (lcBasePath + "API\ANAF_Client.prg") ADDITIVE
         
         ? "  ✓ Căi setate"
-        RETURN .T.
+        llSuccess = .T.
         
     CATCH TO loEx
         ? "  ✗ EROARE SetupPaths:", loEx.Message
-        RETURN .F.
+        llSuccess = .F.
     ENDTRY
+    
+    RETURN llSuccess
 ENDPROC
 
 *====================================================================
@@ -162,7 +166,9 @@ ENDPROC
 * Procedură: InitGlobalConnectionPool
 *====================================================================
 PROCEDURE InitGlobalConnectionPool()
-    LOCAL loPool
+    LOCAL loPool, llSuccess
+    
+    llSuccess = .F.
     
     TRY
         loPool = GetGlobalConnectionPool()
@@ -170,48 +176,54 @@ PROCEDURE InitGlobalConnectionPool()
         IF !ISNULL(loPool)
             ? "  ✓ Connection Pool creat"
             ? loPool.GetPoolStatus()
-            RETURN .T.
+            llSuccess = .T.
         ELSE
             ? "  ✗ Connection Pool eșuat"
-            RETURN .F.
+            llSuccess = .F.
         ENDIF
         
     CATCH TO loEx
         ? "  ✗ EROARE InitGlobalConnectionPool:", loEx.Message
-        RETURN .F.
+        llSuccess = .F.
     ENDTRY
+    
+    RETURN llSuccess
 ENDPROC
 
 *====================================================================
 * Procedură: InitGlobalANAFClient
 *====================================================================
 PROCEDURE InitGlobalANAFClient()
-    LOCAL loClient
+    LOCAL loClient, llSuccess
+    
+    llSuccess = .F.
     
     TRY
         * Verifică dacă există ICAS.oSettings
         IF TYPE('ICAS.oSettings') != 'O'
             ? "  ⚠ SKIP - ICAS.oSettings nu există"
-            RETURN .T.  && Nu e eroare critică
-        ENDIF
-        
-        * Creare client (test environment)
-        loClient = GetGlobalANAFClient(.T.)
-        
-        IF !ISNULL(loClient)
-            ? "  ✓ ANAF Client creat"
-            ? "    Environment: Test"
-            ? "    Base URL:", loClient.cTestURL
-            RETURN .T.
+            llSuccess = .T.  && Nu e eroare critică
         ELSE
-            ? "  ✗ ANAF Client eșuat"
-            RETURN .F.
+            * Creare client (test environment)
+            loClient = GetGlobalANAFClient(.T.)
+            
+            IF !ISNULL(loClient)
+                ? "  ✓ ANAF Client creat"
+                ? "    Environment: Test"
+                ? "    Base URL:", loClient.cTestURL
+                llSuccess = .T.
+            ELSE
+                ? "  ✗ ANAF Client eșuat"
+                llSuccess = .F.
+            ENDIF
         ENDIF
         
     CATCH TO loEx
         ? "  ✗ EROARE InitGlobalANAFClient:", loEx.Message
-        RETURN .F.
+        llSuccess = .F.
     ENDTRY
+    
+    RETURN llSuccess
 ENDPROC
 
 *====================================================================

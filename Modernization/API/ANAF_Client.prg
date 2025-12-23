@@ -47,32 +47,35 @@ DEFINE CLASS ANAFClient AS Custom
     * Metodă: LoadCredentials
     *================================================================
     PROTECTED PROCEDURE LoadCredentials()
+        LOCAL llSuccess
+        
+        llSuccess = .F.
+        
         TRY
             * Verifică existența ICAS.oSettings
             IF TYPE('ICAS.oSettings') != 'O'
                 THIS.LogMessage("EROARE: ICAS.oSettings nu există")
-                RETURN .F.
+            ELSE
+                * Decriptează credențiale
+                THIS.cClientID = Chilkat_Crypt(ICAS.oSettings.EFactura_ClientID, 'D')
+                THIS.cClientSecret = Chilkat_Crypt(ICAS.oSettings.eFactura_SecretID, 'D')
+                
+                IF EMPTY(THIS.cClientID) OR EMPTY(THIS.cClientSecret)
+                    THIS.LogMessage("EROARE: Credențiale ANAF incomplete")
+                ELSE
+                    IF THIS.lDebugMode
+                        THIS.LogMessage("Credențiale încărcate cu succes")
+                    ENDIF
+                    llSuccess = .T.
+                ENDIF
             ENDIF
-            
-            * Decriptează credențiale
-            THIS.cClientID = Chilkat_Crypt(ICAS.oSettings.EFactura_ClientID, 'D')
-            THIS.cClientSecret = Chilkat_Crypt(ICAS.oSettings.eFactura_SecretID, 'D')
-            
-            IF EMPTY(THIS.cClientID) OR EMPTY(THIS.cClientSecret)
-                THIS.LogMessage("EROARE: Credențiale ANAF incomplete")
-                RETURN .F.
-            ENDIF
-            
-            IF THIS.lDebugMode
-                THIS.LogMessage("Credențiale încărcate cu succes")
-            ENDIF
-            
-            RETURN .T.
             
         CATCH TO loEx
             THIS.LogMessage("EROARE LoadCredentials: " + loEx.Message)
-            RETURN .F.
+            llSuccess = .F.
         ENDTRY
+        
+        RETURN llSuccess
     ENDPROC
     
     *================================================================
@@ -86,59 +89,58 @@ DEFINE CLASS ANAFClient AS Custom
             RETURN THIS.cAccessToken
         ENDIF
         
+        lcToken = ""
+        
         TRY
             * Creare HTTP client
             loHttp = CREATEOBJECT("Chilkat_9_5_0.Http")
             
             IF ISNULL(loHttp)
                 THIS.LogMessage("EROARE: Chilkat HTTP indisponibil")
-                RETURN ""
-            ENDIF
-            
-            * Configurare TLS 1.2
-            loHttp.RequireTlsVersion = "1.2"
-            
-            * Body pentru request
-            TEXT TO lcBody NOSHOW TEXTMERGE
-            grant_type=client_credentials&client_id=<<THIS.cClientID>>&client_secret=<<THIS.cClientSecret>>&scope=e-factura
-            ENDTEXT
-            
-            * Headers
-            loHttp.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded")
-            
-            * Apel token endpoint
-            lcResponse = loHttp.PostUrlEncoded(THIS.cTokenURL, lcBody)
-            
-            IF loHttp.LastMethodSuccess = .F.
-                THIS.LogMessage("EROARE token request: " + loHttp.LastErrorText)
-                RETURN ""
-            ENDIF
-            
-            * Parse JSON response
-            loJson = CREATEOBJECT("Chilkat_9_5_0.JsonObject")
-            loJson.Load(lcResponse)
-            
-            lcToken = loJson.StringOf("access_token")
-            
-            IF !EMPTY(lcToken)
-                THIS.cAccessToken = lcToken
-                THIS.dTokenExpiry = DATETIME() + (3600 - 300)  && 1 oră - 5 min buffer
-                
-                IF THIS.lDebugMode
-                    THIS.LogMessage("Access Token obținut")
-                ENDIF
-                
-                RETURN lcToken
             ELSE
-                THIS.LogMessage("EROARE: Token gol în răspuns")
-                THIS.LogMessage(lcResponse)
-                RETURN ""
+                * Configurare TLS 1.2
+                loHttp.RequireTlsVersion = "1.2"
+                
+                * Body pentru request
+                TEXT TO lcBody NOSHOW TEXTMERGE
+                grant_type=client_credentials&client_id=<<THIS.cClientID>>&client_secret=<<THIS.cClientSecret>>&scope=e-factura
+                ENDTEXT
+                
+                * Headers
+                loHttp.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+                
+                * Apel token endpoint
+                lcResponse = loHttp.PostUrlEncoded(THIS.cTokenURL, lcBody)
+                
+                IF loHttp.LastMethodSuccess = .F.
+                    THIS.LogMessage("EROARE token request: " + loHttp.LastErrorText)
+                ELSE
+                    * Parse JSON response
+                    loJson = CREATEOBJECT("Chilkat_9_5_0.JsonObject")
+                    loJson.Load(lcResponse)
+                    
+                    lcToken = loJson.StringOf("access_token")
+                    
+                    IF !EMPTY(lcToken)
+                        THIS.cAccessToken = lcToken
+                        THIS.dTokenExpiry = DATETIME() + (3600 - 300)  && 1 oră - 5 min buffer
+                        
+                        IF THIS.lDebugMode
+                            THIS.LogMessage("Access Token obținut")
+                        ENDIF
+                    ELSE
+                        THIS.LogMessage("EROARE: Token gol în răspuns")
+                        THIS.LogMessage(lcResponse)
+                    ENDIF
+                ENDIF
             ENDIF
             
         CATCH TO loEx
             THIS.LogMessage("EROARE GetAccessToken: " + loEx.Message)
-            RETURN ""
+            lcToken = ""
         ENDTRY
+        
+        RETURN lcToken
     ENDPROC
     
     *================================================================
@@ -172,6 +174,8 @@ DEFINE CLASS ANAFClient AS Custom
             RETURN .NULL.
         ENDIF
         
+        lcResponse = .NULL.
+        
         TRY
             loHttp = CREATEOBJECT("Chilkat_9_5_0.Http")
             loHttp.RequireTlsVersion = "1.2"
@@ -187,16 +191,17 @@ DEFINE CLASS ANAFClient AS Custom
                 IF THIS.lDebugMode
                     THIS.LogMessage("Listă mesaje obținută")
                 ENDIF
-                RETURN lcResponse
             ELSE
                 THIS.LogMessage("EROARE GetMessagesList: " + loHttp.LastErrorText)
-                RETURN .NULL.
+                lcResponse = .NULL.
             ENDIF
             
         CATCH TO loEx
             THIS.LogMessage("EROARE GetMessagesList: " + loEx.Message)
-            RETURN .NULL.
+            lcResponse = .NULL.
         ENDTRY
+        
+        RETURN lcResponse
     ENDPROC
     
     *================================================================
@@ -211,6 +216,8 @@ DEFINE CLASS ANAFClient AS Custom
         IF EMPTY(lcToken)
             RETURN .NULL.
         ENDIF
+        
+        lcResponse = .NULL.
         
         TRY
             loHttp = CREATEOBJECT("Chilkat_9_5_0.Http")
@@ -239,17 +246,17 @@ DEFINE CLASS ANAFClient AS Custom
                 IF THIS.lDebugMode
                     THIS.LogMessage("Upload factură - Status: " + TRANSFORM(loResp.StatusCode))
                 ENDIF
-                
-                RETURN lcResponse
             ELSE
                 THIS.LogMessage("EROARE UploadInvoice: " + loHttp.LastErrorText)
-                RETURN .NULL.
+                lcResponse = .NULL.
             ENDIF
             
         CATCH TO loEx
             THIS.LogMessage("EROARE UploadInvoice: " + loEx.Message)
-            RETURN .NULL.
+            lcResponse = .NULL.
         ENDTRY
+        
+        RETURN lcResponse
     ENDPROC
     
     *================================================================
@@ -263,6 +270,8 @@ DEFINE CLASS ANAFClient AS Custom
         IF EMPTY(lcToken)
             RETURN .NULL.
         ENDIF
+        
+        lcResponse = .NULL.
         
         TRY
             loHttp = CREATEOBJECT("Chilkat_9_5_0.Http")
@@ -279,16 +288,17 @@ DEFINE CLASS ANAFClient AS Custom
                 IF THIS.lDebugMode
                     THIS.LogMessage("Mesaj descărcat: " + tcMessageID)
                 ENDIF
-                RETURN lcResponse
             ELSE
                 THIS.LogMessage("EROARE DownloadMessage: " + loHttp.LastErrorText)
-                RETURN .NULL.
+                lcResponse = .NULL.
             ENDIF
             
         CATCH TO loEx
             THIS.LogMessage("EROARE DownloadMessage: " + loEx.Message)
-            RETURN .NULL.
+            lcResponse = .NULL.
         ENDTRY
+        
+        RETURN lcResponse
     ENDPROC
     
     *================================================================

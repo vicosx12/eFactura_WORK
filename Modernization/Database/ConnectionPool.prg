@@ -170,18 +170,21 @@ DEFINE CLASS ConnectionPool AS Custom
     * Metodă: IsConnectionValid
     *================================================================
     PROTECTED PROCEDURE IsConnectionValid(tnHandle)
-        LOCAL lnResult
+        LOCAL lnResult, llValid
+        
+        llValid = .F.
         
         TRY
             lnResult = SQLEXEC(tnHandle, "SELECT 1 AS Test", "curPoolTest")
             IF lnResult > 0
                 USE IN SELECT("curPoolTest")
-                RETURN .T.
+                llValid = .T.
             ENDIF
-            RETURN .F.
         CATCH
-            RETURN .F.
+            llValid = .F.
         ENDTRY
+        
+        RETURN llValid
     ENDPROC
     
     *================================================================
