@@ -732,8 +732,9 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
     * Auto-tuning bazat pe workload
     *================================================================
     PROCEDURE OptimizeForWorkload(tcWorkloadType)
-        LOCAL lcType
+        LOCAL lcType, lnOldMaxSize, lnNewMaxSize, i
         lcType = UPPER(tcWorkloadType)
+        lnOldMaxSize = THIS.nMaximumPoolSize
         
         DO CASE
             CASE lcType = "OLTP"
@@ -771,6 +772,30 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
             OTHERWISE
                 THIS.LogMessage("Workload type necunoscut: " + tcWorkloadType)
         ENDCASE
+        
+        * Redimensionare array dacă pool size s-a schimbat
+        lnNewMaxSize = THIS.nMaximumPoolSize
+        IF lnNewMaxSize != lnOldMaxSize
+            DIMENSION THIS.aConnections[lnNewMaxSize, 10]
+            
+            * Inițializare noi conexiuni (dacă pool-ul a crescut)
+            IF lnNewMaxSize > lnOldMaxSize
+                FOR i = lnOldMaxSize + 1 TO lnNewMaxSize
+                    THIS.aConnections[i, 1] = .NULL.
+                    THIS.aConnections[i, 2] = .F.
+                    THIS.aConnections[i, 3] = NULL
+                    THIS.aConnections[i, 4] = NULL
+                    THIS.aConnections[i, 5] = 0
+                    THIS.aConnections[i, 6] = NULL
+                    THIS.aConnections[i, 7] = NULL
+                    THIS.aConnections[i, 8] = ""
+                    THIS.aConnections[i, 9] = 0
+                    THIS.aConnections[i, 10] = .F.
+                ENDFOR
+            ENDIF
+            
+            THIS.LogMessage("Pool redimensionat: " + TRANSFORM(lnOldMaxSize) + " -> " + TRANSFORM(lnNewMaxSize))
+        ENDIF
     ENDPROC
     
     *================================================================
