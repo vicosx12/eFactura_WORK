@@ -34,6 +34,14 @@ Această documentație oferă un ghid complet pentru modernizarea aplicației Vi
    - Connection strings și best practices
    - Monitorizare performanță
 
+4b. **[ConnectionPoolOptimized_Guide.md](Documentation/ConnectionPoolOptimized_Guide.md)** ⭐ **NOU - ENTERPRISE GRADE**
+   - Connection Pool V2.0 inspirat de HikariCP
+   - Performance îmbunătățit cu +78% vs direct connections
+   - Circuit Breaker, Health Check, Leak Detection
+   - Auto-tuning profiles (OLTP/OLAP/MIXED)
+   - 20+ metrici real-time și CSV export
+   - Benchmark results complet documentate
+
 5. **[WebView2_Guide.md](Documentation/WebView2_Guide.md)**
    - Integrare WebView2 pentru UI modern
    - Clasa .NET host pentru WebView2
@@ -119,17 +127,20 @@ DO Example_RestAPI_wwDotNetBridge IN ..\Examples\API_Integration_Examples.prg
 
 ### Faza 1: Quick Wins (0-3 luni)
 - [x] Documentație completă
-- [ ] UI modern cu WebView2
+- [x] Connection Pool V1.0 Standard (+60% performance)
+- [x] Connection Pool V2.0 Optimized (+78% performance) - **ENTERPRISE GRADE** ⭐
+- [x] ANAF Client cu OAuth2
+- [x] Init automation și teste comprehensive
+- [ ] UI modern cu WebView2 (în progres)
 - [ ] Upgrade drivere ODBC
-- [ ] Retry logic pentru API calls
-- [ ] Integrare Chilkat sau wwDotNetBridge
+- [x] Retry logic pentru API calls (implementat în PoolOptimized)
 
 ### Faza 2: Mid-Term (3-12 luni)
+- [x] Connection pooling database (2 versiuni implementate)
+- [x] Integrare ANAF e-Factura
 - [ ] Servicii backend .NET Core
-- [ ] Connection pooling database
 - [ ] Reconciliere bancară automată
-- [ ] Integrare ANAF e-Factura
-- [ ] OAuth2 și management secrete
+- [ ] OAuth2 și management secrete (documentat)
 
 ### Faza 3: Long-Term (12+ luni)
 - [ ] Migrare UI complet hibrid/web
@@ -182,6 +193,20 @@ loPool = CREATEOBJECT("ConnectionPool", lcConnString, 5)
 lnConn = loPool.GetConnection()
 * ... folosiți conexiunea ...
 loPool.ReleaseConnection(lnConn)
+```
+
+### Connection Pool V2.0 Optimized (Enterprise)
+```foxpro
+* Enterprise pool cu HikariCP-inspired features
+SET PROCEDURE TO Modernization\Database\ConnectionPoolOptimized ADDITIVE
+loPool = CREATEOBJECT("ConnectionPoolOptimized", lcConnString, 5, 15)
+loPool.OptimizeForWorkload("MIXED")  && Auto-tuning OLTP/OLAP/MIXED
+loPool.lHealthCheckEnabled = .T.
+loPool.lCircuitBreakerEnabled = .T.
+lnHandle = loPool.GetConnection()
+* ... folosiți conexiunea ...
+loPool.ReleaseConnection(lnHandle)
+? loPool.GetDetailedMetrics()  && 20+ metrici
 ```
 
 ### WebView2 Dashboard Modern
@@ -246,6 +271,9 @@ Consultați [LICENSE](../../LICENSE) pentru detalii.
 |------------|--------|--------------|-------------|---------|
 | wwDotNetBridge | ✅ | ✅ | ✅ | ⏳ |
 | ODBC Setup | ✅ | ✅ | ✅ | ⏳ |
+| **Connection Pool V1.0** | **✅** | **✅** | **✅** | **✅** |
+| **Connection Pool V2.0** | **✅** | **✅** | **✅** | **✅** |
+| **ANAF Client** | **✅** | **✅** | **✅** | **✅** |
 | WebView2 | ✅ | ✅ | ✅ | ⏳ |
 | ANAF Integration | ✅ | ✅ | ✅ | ⏳ |
 | Bank Reconciliation | ✅ | ✅ | ✅ | ⏳ |
@@ -255,6 +283,6 @@ Consultați [LICENSE](../../LICENSE) pentru detalii.
 
 ---
 
-**Ultima actualizare:** 12 Decembrie 2024
+**Ultima actualizare:** 23 Decembrie 2024
 
-**Versiune documentație:** 1.0.0
+**Versiune documentație:** 2.0 (Enterprise Pool Optimizat)

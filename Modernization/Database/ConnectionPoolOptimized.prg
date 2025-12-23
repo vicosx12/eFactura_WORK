@@ -24,7 +24,7 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
     *================================================================
     * PROPRIETĂȚI POOL
     *================================================================
-    DIMENSION aConnections[1]
+    DIMENSION aConnections[1, 10]  && Initialize as 2D array, will be redimensioned in Init
     
     * Core Configuration (HikariCP inspired)
     nMinimumIdle = 5                && Minim conexiuni idle (HikariCP: minimumIdle)
