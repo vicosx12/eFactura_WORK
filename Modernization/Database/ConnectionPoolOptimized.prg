@@ -462,11 +462,17 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
         
         tCreated = THIS.aConnections[tnSlot, 3]
         
-        IF ISNULL(tCreated)
+        * Verificare tip de date - trebuie să fie datetime
+        IF ISNULL(tCreated) OR VARTYPE(tCreated) != "T"
             RETURN .F.
         ENDIF
         
-        nAge = (DATETIME() - tCreated) * 86400000  && milliseconds
+        TRY
+            nAge = (DATETIME() - tCreated) * 86400000  && milliseconds
+        CATCH
+            * În caz de eroare la calcul, considerăm că nu e expirată
+            RETURN .F.
+        ENDTRY
         
         RETURN (nAge > THIS.nMaxLifetime)
     ENDPROC
@@ -778,9 +784,11 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
         IF lnNewMaxSize != lnOldMaxSize
             DIMENSION THIS.aConnections[lnNewMaxSize, 10]
             
-            * Inițializare noi conexiuni (dacă pool-ul a crescut)
-            IF lnNewMaxSize > lnOldMaxSize
-                FOR i = lnOldMaxSize + 1 TO lnNewMaxSize
+            * Inițializare toate elementele pentru a preveni type mismatch
+            * DIMENSION poate lăsa valori .F. în unele elemente
+            FOR i = 1 TO lnNewMaxSize
+                * Păstrăm conexiunile existente, inițializăm doar cele noi sau invalide
+                IF i > lnOldMaxSize OR VARTYPE(THIS.aConnections[i, 3]) != "T"
                     THIS.aConnections[i, 1] = .NULL.
                     THIS.aConnections[i, 2] = .F.
                     THIS.aConnections[i, 3] = NULL
@@ -791,8 +799,8 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
                     THIS.aConnections[i, 8] = ""
                     THIS.aConnections[i, 9] = 0
                     THIS.aConnections[i, 10] = .F.
-                ENDFOR
-            ENDIF
+                ENDIF
+            ENDFOR
             
             THIS.LogMessage("Pool redimensionat: " + TRANSFORM(lnOldMaxSize) + " -> " + TRANSFORM(lnNewMaxSize))
         ENDIF
