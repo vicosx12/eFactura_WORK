@@ -166,7 +166,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     *
     * Returns: .T. if successful, .F. otherwise
     ***********************************************************************
-    PROCEDURE LoadData(tcSelectCmd, tcAlias, tcSchema, tlNoData)
+    FUNCTION LoadData(tcSelectCmd, tcAlias, tcSchema, tlNoData)
         LOCAL llSuccess, lcOldAlias
         
         llSuccess = .F.
@@ -213,7 +213,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
         ENDIF
         
         RETURN llSuccess
-    ENDPROC
+    ENDFUNC
     
     ***********************************************************************
     * SaveChanges - Save all modifications to database
@@ -224,7 +224,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     *
     * Returns: .T. if successful, .F. otherwise
     ***********************************************************************
-    PROCEDURE SaveChanges(tlForce, tlShowConflicts)
+    FUNCTION SaveChanges(tlForce, tlShowConflicts)
         LOCAL llSuccess, lnUpdated, lnInserted, lnDeleted, lcAlias
         LOCAL llForce, llShowConflicts, lcOldAlias
         
@@ -328,7 +328,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
         ENDIF
         
         RETURN llSuccess
-    ENDPROC
+    ENDFUNC
     
     ***********************************************************************
     * RevertChanges - Revert all uncommitted changes
@@ -338,7 +338,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     *
     * Returns: .T. if successful, .F. otherwise
     ***********************************************************************
-    PROCEDURE RevertChanges(tcAlias)
+    FUNCTION RevertChanges(tcAlias)
         LOCAL llSuccess, lcAlias, lnChanges, lcOldAlias
         
         llSuccess = .F.
@@ -388,7 +388,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
         ENDIF
         
         RETURN llSuccess
-    ENDPROC
+    ENDFUNC
     
     ***********************************************************************
     * DeleteRecord - Delete current record
@@ -399,7 +399,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     *
     * Returns: .T. if successful, .F. otherwise
     ***********************************************************************
-    PROCEDURE DeleteRecord(tcAlias, tlConfirm)
+    FUNCTION DeleteRecord(tcAlias, tlConfirm)
         LOCAL llSuccess, lcAlias, llConfirm, lnRecno, lcOldAlias
         LOCAL lcMessage, lnResponse
         
@@ -470,7 +470,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
         ENDIF
         
         RETURN llSuccess
-    ENDPROC
+    ENDFUNC
     
     ***********************************************************************
     * AddRecord - Add a new record
@@ -481,7 +481,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     *
     * Returns: .T. if successful, .F. otherwise
     ***********************************************************************
-    PROCEDURE AddRecord(tcAlias, toFieldValues)
+    FUNCTION AddRecord(tcAlias, toFieldValues)
         LOCAL llSuccess, lcAlias, lcOldAlias, i, lcField, luValue
         
         llSuccess = .F.
@@ -549,14 +549,14 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
         ENDIF
         
         RETURN llSuccess
-    ENDPROC
+    ENDFUNC
     
     ***********************************************************************
     * RefreshData - Refresh data from database
     * 
     * Returns: .T. if successful, .F. otherwise
     ***********************************************************************
-    PROCEDURE RefreshData()
+    FUNCTION RefreshData()
         LOCAL llSuccess, lnRecno, lcAlias, lcOldAlias
         
         llSuccess = .F.
@@ -599,7 +599,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
         ENDIF
         
         RETURN llSuccess
-    ENDPROC
+    ENDFUNC
     
     ***********************************************************************
     * PROTECTED: ValidateData - Validate data before save
@@ -835,14 +835,14 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     ***********************************************************************
     * GetErrorMessage - Get last error message
     ***********************************************************************
-    PROCEDURE GetErrorMessage()
+    FUNCTION GetErrorMessage()
         RETURN THIS.cLastError
-    ENDPROC
+    ENDFUNC
     
     ***********************************************************************
     * GetStatistics - Get operation statistics
     ***********************************************************************
-    PROCEDURE GetStatistics()
+    FUNCTION GetStatistics()
         LOCAL lcStats
         
         TEXT TO lcStats NOSHOW TEXTMERGE
@@ -856,7 +856,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
         ENDTEXT
         
         RETURN lcStats
-    ENDPROC
+    ENDFUNC
     
     ***********************************************************************
     * ResetStatistics - Reset operation statistics
