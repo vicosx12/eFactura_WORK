@@ -177,6 +177,18 @@ PROCEDURE InitGlobalConnectionPool()
         IF !ISNULL(loPool)
             ? "  ✓ Connection Pool creat"
             ? loPool.GetPoolStatus()
+            
+            * Verify pool actually has connections
+            IF loPool.nCurrentSize = 0
+                ? "  ⚠ WARNING: Pool created but has 0 active connections"
+                ? "  Possible causes:"
+                ? "    - SQL Server not running"
+                ? "    - Wrong credentials in connection string"
+                ? "    - Database doesn't exist"
+                ? "    - SQL Server Native Client 11.0 not installed"
+                ? "  Connection String: " + loPool.cConnectionString
+            ENDIF
+            
             llSuccess = .T.
         ELSE
             ? "  ✗ Connection Pool eșuat"

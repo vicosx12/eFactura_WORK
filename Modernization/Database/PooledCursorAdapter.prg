@@ -112,7 +112,19 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
             THIS.nPoolHandle = THIS.oPool.GetConnection()
             
             IF THIS.nPoolHandle <= 0
-                ERROR "Failed to obtain connection from pool"
+                * Provide detailed diagnostic information
+                LOCAL lcError
+                lcError = "Failed to obtain connection from pool." + CHR(13) + CHR(10)
+                lcError = lcError + "Pool Status: " + THIS.oPool.GetPoolStatus() + CHR(13) + CHR(10)
+                lcError = lcError + "Active Connections: " + TRANSFORM(THIS.oPool.nCurrentSize) + "/" + ;
+                                    TRANSFORM(THIS.oPool.nMaximumPoolSize) + CHR(13) + CHR(10)
+                lcError = lcError + "Connection String: " + THIS.oPool.cConnectionString + CHR(13) + CHR(10)
+                lcError = lcError + CHR(13) + CHR(10) + "Check:" + CHR(13) + CHR(10)
+                lcError = lcError + "1. SQL Server is running" + CHR(13) + CHR(10)
+                lcError = lcError + "2. Credentials are correct" + CHR(13) + CHR(10)
+                lcError = lcError + "3. Database exists" + CHR(13) + CHR(10)
+                lcError = lcError + "4. SQL Server Native Client 11.0 is installed"
+                ERROR lcError
             ENDIF
             
             * Configure CursorAdapter
