@@ -53,11 +53,11 @@ PROCEDURE Init_Modernization_Environment()
         ? "✓ INIȚIALIZARE COMPLETĂ"
         ? ""
         ? "Componente disponibile:"
-        ? "  - _SCREEN.oGlobalConnectionPool"
+        ? "  - _SCREEN.oOptimizedConnectionPool"
         ? "  - _SCREEN.oGlobalANAFClient"
         ? ""
         ? "Funcții helper:"
-        ? "  - GetGlobalConnectionPool()"
+        ? "  - GetOptimizedConnectionPool()"
         ? "  - GetGlobalANAFClient()"
     ELSE
         ? "✗ INIȚIALIZARE INCOMPLETĂ"
@@ -78,10 +78,11 @@ PROCEDURE SetupPaths()
     
     TRY
         * Calea de bază
-        lcBasePath = ADDBS(JUSTPATH(SYS(16)))
+        lcBasePath = ADDBS(JUSTPATH(SYS(16,1)))
         
         * Adaugă căi în SET PROCEDURE
         SET PROCEDURE TO (lcBasePath + "Database\ConnectionPool.prg") ADDITIVE
+        SET PROCEDURE TO (lcBasePath + "Database\ConnectionPoolOptimized.prg") ADDITIVE
         SET PROCEDURE TO (lcBasePath + "API\ANAF_Client.prg") ADDITIVE
         
         ? "  ✓ Căi setate"
@@ -171,7 +172,7 @@ PROCEDURE InitGlobalConnectionPool()
     llSuccess = .F.
     
     TRY
-        loPool = GetGlobalConnectionPool()
+        loPool = GetOptimizedConnectionPool()
         
         IF !ISNULL(loPool)
             ? "  ✓ Connection Pool creat"
@@ -233,8 +234,8 @@ PROCEDURE Cleanup_Modernization_Environment()
     ? "Cleanup mediu modernizare..."
     
     * Închide Connection Pool
-    IF TYPE('_SCREEN.oGlobalConnectionPool') = 'O'
-        _SCREEN.oGlobalConnectionPool.CloseAll()
+    IF TYPE('_SCREEN.oOptimizedConnectionPool') = 'O'
+        _SCREEN.oOptimizedConnectionPool.CloseAll()
         ? "  ✓ Connection Pool închis"
     ENDIF
     
