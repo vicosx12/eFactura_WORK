@@ -266,11 +266,11 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
             lnDeleted = 0
             
             * Scan for changes and count
-            SCAN FOR GETFLDSTATE(-1, lcAlias) != 1
+            SCAN FOR GETFLDSTATE(-1) != 1
                 DO CASE
-                    CASE GETFLDSTATE(0, lcAlias) = 4  && Deleted
+                    CASE GETFLDSTATE(0) = 4  && Deleted
                         lnDeleted = lnDeleted + 1
-                    CASE GETFLDSTATE(0, lcAlias) = 2  && New
+                    CASE GETFLDSTATE(0) = 2  && New
                         lnInserted = lnInserted + 1
                     OTHERWISE
                         lnUpdated = lnUpdated + 1
@@ -380,7 +380,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
             
             * Count changes before revert
             lnChanges = 0
-            SCAN FOR GETFLDSTATE(-1, lcAlias) != 1
+            SCAN FOR GETFLDSTATE(-1) != 1
                 lnChanges = lnChanges + 1
             ENDSCAN
             
