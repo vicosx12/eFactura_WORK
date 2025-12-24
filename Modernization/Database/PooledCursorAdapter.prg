@@ -279,10 +279,13 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
                 ENDCASE
             ENDSCAN
             
-            * Perform table update
-            * Call parent CursorAdapter's TableUpdate method
-            * Syntax: CursorAdapter::TableUpdate() calls the inherited method
-            llSuccess = CursorAdapter::TableUpdate(llForce, llShowConflicts, lcAlias)
+            * Perform table update using VFP's TABLEUPDATE() function
+            * NOTE: TABLEUPDATE() is a VFP built-in function, NOT a CursorAdapter method!
+            * TABLEUPDATE(nRows, lForce, cTableAlias)
+            *   nRows: 1 = update all rows (silent), 2 = update all rows (show conflicts)
+            *   lForce: .T. = force update overwriting conflicts, .F. = stop on conflict
+            lnRows = IIF(llShowConflicts, 2, 1)  && 2 = show conflicts, 1 = silent
+            llSuccess = TABLEUPDATE(lnRows, llForce, lcAlias)
             
             IF llSuccess
                 * Update statistics
