@@ -50,7 +50,8 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     PROTECTED cLastError
     
     * Query Result Cache properties
-    PROTECTED DIMENSION aQueryCache[50, 5]  && SQL, CacheAlias, Created, TTL, LastAccess
+    DIMENSION aQueryCache[50, 5]  && SQL, CacheAlias, Created, TTL, LastAccess
+    PROTECTED aQueryCache
     PROTECTED nQueryCacheCount
     PROTECTED nQueryCacheSize
     PROTECTED nQueryCacheTTL
