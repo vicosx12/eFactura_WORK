@@ -49,22 +49,15 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     PROTECTED oPool
     PROTECTED cLastError
     
-    * Query Result Cache properties
+    * Query Result Cache properties (internal)
     DIMENSION aQueryCache[50, 5]  && SQL, CacheAlias, Created, TTL, LastAccess
     PROTECTED aQueryCache
     PROTECTED nQueryCacheCount
-    PROTECTED nQueryCacheSize
-    PROTECTED nQueryCacheTTL
-    PROTECTED lEnableQueryCache
-    PROTECTED nQueryCacheHits
-    PROTECTED nQueryCacheMisses
     
-    * Lazy Loading properties
-    PROTECTED nLazyPageSize
+    * Lazy Loading properties (internal)
     PROTECTED nLazyCurrentPage
     PROTECTED nLazyTotalPages
     PROTECTED cLazyBaseSQL
-    PROTECTED lLazyLoadingEnabled
     PROTECTED lInTransaction
     PROTECTED lDebugMode
     PROTECTED cAuditTable
@@ -79,6 +72,18 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     cPrimaryKeyField = ""          && Primary key field name
     cTimestampField = ""           && Timestamp field for concurrency
     lEnableLogging = .T.           && Enable operation logging
+    
+    * Query Result Cache configuration (opt-in feature)
+    lEnableQueryCache = .F.        && Enable query result caching (opt-in)
+    nQueryCacheSize = 50           && Maximum number of cached queries
+    nQueryCacheTTL = 300           && Cache TTL in seconds (5 minutes)
+    nQueryCacheHits = 0            && Cache hit counter
+    nQueryCacheMisses = 0          && Cache miss counter
+    
+    * Lazy Loading configuration (opt-in feature)
+    nLazyPageSize = 1000           && Records per page for lazy loading
+    lLazyLoadingEnabled = .F.      && Enable lazy loading (set by LoadDataLazy)
+    lLazyHasMorePages = .F.        && Indicates if more pages available
     
     * Statistics
     nRecordsAdded = 0
@@ -143,20 +148,11 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
             THIS.UseDeDataSource = .T.
             THIS.UpdateNameList = ""       && Will be set dynamically
             
-            * Initialize Query Result Cache
+            * Initialize internal counters (public properties already have defaults)
             THIS.nQueryCacheCount = 0
-            THIS.nQueryCacheSize = 50
-            THIS.nQueryCacheTTL = 300  && 5 minutes default
-            THIS.lEnableQueryCache = .F.  && Disabled by default (opt-in)
-            THIS.nQueryCacheHits = 0
-            THIS.nQueryCacheMisses = 0
-            
-            * Initialize Lazy Loading
-            THIS.nLazyPageSize = 1000
             THIS.nLazyCurrentPage = 1
             THIS.nLazyTotalPages = 0
             THIS.cLazyBaseSQL = ""
-            THIS.lLazyLoadingEnabled = .F.  && Disabled by default (opt-in)
             
             llSuccess = .T.
             
