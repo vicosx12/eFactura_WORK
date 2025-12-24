@@ -331,6 +331,26 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     ENDFUNC
     
     ***********************************************************************
+    * SaveData - Simplified wrapper for SaveChanges
+    * 
+    * This is a convenience method that calls SaveChanges with default parameters.
+    * Useful for simple save operations without forcing or conflict handling.
+    *
+    * Parameters:
+    *   tlForce - Optional: Force update all records (default .F.)
+    *
+    * Returns: .T. if successful, .F. otherwise
+    ***********************************************************************
+    FUNCTION SaveData(tlForce)
+        LOCAL llForce
+        
+        llForce = VARTYPE(tlForce) = "L" AND tlForce
+        
+        * Call SaveChanges with force parameter and no conflict display
+        RETURN THIS.SaveChanges(llForce, .F.)
+    ENDFUNC
+    
+    ***********************************************************************
     * RevertChanges - Revert all uncommitted changes
     * 
     * Parameters:
