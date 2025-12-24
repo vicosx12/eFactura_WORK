@@ -280,7 +280,9 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
             ENDSCAN
             
             * Perform table update
-            llSuccess = THIS.TableUpdate(llForce, llShowConflicts, lcAlias)
+            * Call parent CursorAdapter's TableUpdate method
+            * Syntax: CursorAdapter::TableUpdate() calls the inherited method
+            llSuccess = CursorAdapter::TableUpdate(llForce, llShowConflicts, lcAlias)
             
             IF llSuccess
                 * Update statistics

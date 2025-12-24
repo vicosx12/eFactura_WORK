@@ -354,7 +354,14 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
                 SQLSETPROP(lnHandle, "QueryTimeOut", THIS.nQueryTimeout)
                 SQLSETPROP(lnHandle, "Transactions", THIS.nIsolationLevel)
                 SQLSETPROP(lnHandle, "BatchMode", THIS.lBatchMode)
-                SQLSETPROP(lnHandle, "PacketSize", THIS.nPacketSize)
+                
+                * PacketSize - Some drivers don't allow this after connection
+                * Wrap in TRY/CATCH to suppress warning if not supported
+                TRY
+                    SQLSETPROP(lnHandle, "PacketSize", THIS.nPacketSize)
+                CATCH
+                    * Ignore - PacketSize already set in connection string
+                ENDTRY
                 
                 * Additional properties
                 IF THIS.lAsynchronousProcessing
