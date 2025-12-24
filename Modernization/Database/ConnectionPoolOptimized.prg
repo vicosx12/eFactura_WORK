@@ -129,11 +129,11 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
         FOR i = 1 TO THIS.nMaximumPoolSize
             THIS.aConnections[i, 1] = .NULL.
             THIS.aConnections[i, 2] = .F.
-            THIS.aConnections[i, 3] = NULL
-            THIS.aConnections[i, 4] = NULL
+            THIS.aConnections[i, 3] = .NULL.  && Consistent .NULL. usage
+            THIS.aConnections[i, 4] = .NULL.  && Consistent .NULL. usage
             THIS.aConnections[i, 5] = 0
-            THIS.aConnections[i, 6] = NULL
-            THIS.aConnections[i, 7] = NULL
+            THIS.aConnections[i, 6] = .NULL.  && Consistent .NULL. usage
+            THIS.aConnections[i, 7] = .NULL.  && Consistent .NULL. usage
             THIS.aConnections[i, 8] = ""
             THIS.aConnections[i, 9] = 0
             THIS.aConnections[i, 10] = .F.
@@ -458,12 +458,23 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
     * Verifică dacă conexiunea a depășit max lifetime
     *================================================================
     PROTECTED PROCEDURE IsConnectionExpired(tnSlot)
-        LOCAL tCreated, nAge
+        LOCAL tCreated, nAge, lcType
         
         tCreated = THIS.aConnections[tnSlot, 3]
+        lcType = VARTYPE(tCreated)
         
-        * Verificare tip de date - trebuie să fie datetime
-        IF ISNULL(tCreated) OR VARTYPE(tCreated) != "T"
+        * Verificare tip de date - trebuie să fie datetime (type "T")
+        * Acceptăm doar DATETIME valid, orice altceva (NULL, .F., .NULL., etc) = nu expirat
+        IF lcType != "T"
+            * Dacă nu e datetime valid, re-inițializăm slotul pentru siguranță
+            IF lcType = "L" OR lcType = "X"  && Logical (.F.) sau Undefined (.NULL.)
+                THIS.aConnections[tnSlot, 3] = .NULL.
+            ENDIF
+            RETURN .F.
+        ENDIF
+        
+        * Verificare suplimentară că datetime e valid
+        IF ISNULL(tCreated) OR EMPTY(tCreated)
             RETURN .F.
         ENDIF
         
@@ -471,6 +482,8 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
             nAge = (DATETIME() - tCreated) * 86400000  && milliseconds
         CATCH
             * În caz de eroare la calcul, considerăm că nu e expirată
+            * Re-inițializăm pentru a preveni erori viitoare
+            THIS.aConnections[tnSlot, 3] = .NULL.
             RETURN .F.
         ENDTRY
         
@@ -496,11 +509,11 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
         
         THIS.aConnections[tnSlot, 1] = .NULL.
         THIS.aConnections[tnSlot, 2] = .F.
-        THIS.aConnections[tnSlot, 3] = NULL
-        THIS.aConnections[tnSlot, 4] = NULL
+        THIS.aConnections[tnSlot, 3] = .NULL.  && Consistent .NULL. usage
+        THIS.aConnections[tnSlot, 4] = .NULL.  && Consistent .NULL. usage
         THIS.aConnections[tnSlot, 5] = 0
-        THIS.aConnections[tnSlot, 6] = NULL
-        THIS.aConnections[tnSlot, 7] = NULL
+        THIS.aConnections[tnSlot, 6] = .NULL.  && Consistent .NULL. usage
+        THIS.aConnections[tnSlot, 7] = .NULL.  && Consistent .NULL. usage
         THIS.aConnections[tnSlot, 8] = ""
         THIS.aConnections[tnSlot, 9] = 0
         THIS.aConnections[tnSlot, 10] = .F.
@@ -791,11 +804,11 @@ DEFINE CLASS ConnectionPoolOptimized AS Custom
                 IF i > lnOldMaxSize OR VARTYPE(THIS.aConnections[i, 3]) != "T"
                     THIS.aConnections[i, 1] = .NULL.
                     THIS.aConnections[i, 2] = .F.
-                    THIS.aConnections[i, 3] = NULL
-                    THIS.aConnections[i, 4] = NULL
+                    THIS.aConnections[i, 3] = .NULL.  && Consistent .NULL. usage
+                    THIS.aConnections[i, 4] = .NULL.  && Consistent .NULL. usage
                     THIS.aConnections[i, 5] = 0
-                    THIS.aConnections[i, 6] = NULL
-                    THIS.aConnections[i, 7] = NULL
+                    THIS.aConnections[i, 6] = .NULL.  && Consistent .NULL. usage
+                    THIS.aConnections[i, 7] = .NULL.  && Consistent .NULL. usage
                     THIS.aConnections[i, 8] = ""
                     THIS.aConnections[i, 9] = 0
                     THIS.aConnections[i, 10] = .F.
