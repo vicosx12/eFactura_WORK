@@ -231,9 +231,10 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     ***********************************************************************
     * SaveChanges - Save all modifications to database
     * 
-    * Uses CursorAdapter's automatic update mechanism via ApplyUpdates()
-    * CursorAdapter handles the update when Tables, KeyFieldList, 
+    * Uses CursorAdapter's automatic configuration mechanism with TABLEUPDATE()
+    * CursorAdapter handles the SQL generation when Tables, KeyFieldList, 
     * UpdatableFieldList, and UpdateNameList are properly configured.
+    * TABLEUPDATE() then executes the generated SQL on the backend.
     *
     * Parameters:
     *   tlForce - Not used (kept for compatibility)
@@ -300,11 +301,18 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
                 ENDCASE
             ENDSCAN
             
-            * Use CursorAdapter's ApplyUpdates() to save changes
-            * This relies on Tables, KeyFieldList, UpdatableFieldList, UpdateNameList
-            * being properly configured by MakeUpdatable()
-            lnConflicts = THIS.ApplyUpdates()
-            llSuccess = (lnConflicts = 0)
+            * Use VFP's TABLEUPDATE() function on the buffered cursor
+            * With CursorAdapter properties properly configured, this will:
+            * 1. Generate UPDATE/INSERT/DELETE statements based on UpdatableFieldList
+            * 2. Use KeyFieldList to identify records
+            * 3. Map fields via UpdateNameList to backend table columns
+            * 4. Execute the SQL commands on the backend
+            *
+            * Parameters:
+            *   1 = update all changed rows
+            *   .T. = force update (overwrite conflicts)
+            *   lcAlias = cursor alias to update
+            llSuccess = TABLEUPDATE(1, .T., lcAlias)
             
             IF llSuccess
                 * Update statistics
@@ -327,7 +335,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
                     "Saved changes: " + TRANSFORM(lnInserted) + " inserted, " + ;
                     TRANSFORM(lnUpdated) + " updated, " + TRANSFORM(lnDeleted) + " deleted")
             ELSE
-                THIS.cLastError = "ApplyUpdates failed with " + TRANSFORM(lnConflicts) + " conflicts"
+                THIS.cLastError = "TABLEUPDATE failed - check for conflicts or backend errors"
                 THIS.LogError(THIS.cLastError)
                 
                 * Rollback transaction if not auto-commit
@@ -805,7 +813,8 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     * PROTECTED: MakeUpdatable - Configure CursorAdapter for automatic updates
     * 
     * This method configures the CursorAdapter's update properties so that
-    * ApplyUpdates() can automatically save changes to the backend database.
+    * TABLEUPDATE() can automatically save changes to the backend database
+    * using the property mappings.
     *
     * Parameters:
     *   tcTableName - Backend table name (e.g., "Customers")
