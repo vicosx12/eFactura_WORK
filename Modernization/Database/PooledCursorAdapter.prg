@@ -266,7 +266,9 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
             lnDeleted = 0
             
             * Scan for changes and count
-            SCAN FOR GETFLDSTATE(-1) != 1
+            * GETFLDSTATE(-1) returns a string like "11121" where each char is field state
+            * State 1 = unchanged, so check if string != all 1's
+            SCAN FOR GETFLDSTATE(-1) != REPLICATE("1", FCOUNT())
                 DO CASE
                     CASE GETFLDSTATE(0) = 4  && Deleted
                         lnDeleted = lnDeleted + 1
@@ -379,8 +381,10 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
             SELECT (lcAlias)
             
             * Count changes before revert
+            * GETFLDSTATE(-1) returns a string like "11121" where each char is field state
+            * State 1 = unchanged, so check if string != all 1's
             lnChanges = 0
-            SCAN FOR GETFLDSTATE(-1) != 1
+            SCAN FOR GETFLDSTATE(-1) != REPLICATE("1", FCOUNT())
                 lnChanges = lnChanges + 1
             ENDSCAN
             
