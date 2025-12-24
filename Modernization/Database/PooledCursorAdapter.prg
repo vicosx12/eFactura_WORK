@@ -161,13 +161,13 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     * Parameters:
     *   tcSelectCmd - SQL SELECT statement
     *   tcAlias - Cursor alias name
-    *   tcSchema - Optional cursor schema
-    *   tlNoData - Optional, fetch structure only
+    *   tcTableName - Optional: Backend table name (for updates)
+    *   tcKeyField - Optional: Primary key field (auto-detected if empty)
     *
     * Returns: .T. if successful, .F. otherwise
     ***********************************************************************
-    FUNCTION LoadData(tcSelectCmd, tcAlias, tcSchema, tlNoData)
-        LOCAL llSuccess, lcOldAlias
+    FUNCTION LoadData(tcSelectCmd, tcAlias, tcTableName, tcKeyField)
+        LOCAL llSuccess, lcOldAlias, lcTableName
         
         llSuccess = .F.
         lcOldAlias = ALIAS()
@@ -182,19 +182,32 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
             THIS.SelectCmd = tcSelectCmd
             THIS.Alias = tcAlias
             
-            IF !EMPTY(tcSchema)
-                THIS.CursorSchema = tcSchema
-            ENDIF
+            * Enable buffering for updates
+            THIS.BufferModeOverride = 5  && Optimistic table buffering
             
             * Execute query
-            llSuccess = THIS.CursorFill(VARTYPE(tlNoData) = "L" AND tlNoData, .F.)
+            llSuccess = THIS.CursorFill()
             
             IF llSuccess
                 THIS.LogOperation("LOAD", "Loaded " + TRANSFORM(RECCOUNT(tcAlias)) + " records into " + tcAlias)
                 
-                * Auto-detect primary key if not set
-                IF EMPTY(THIS.cPrimaryKeyField)
+                * Determine table name from SELECT if not provided
+                lcTableName = tcTableName
+                IF EMPTY(lcTableName)
+                    lcTableName = THIS.ExtractTableName(tcSelectCmd)
+                ENDIF
+                
+                * Auto-detect primary key if not provided
+                IF EMPTY(tcKeyField) AND EMPTY(THIS.cPrimaryKeyField)
                     THIS.DetectPrimaryKey(tcAlias)
+                    tcKeyField = THIS.cPrimaryKeyField
+                ELSE
+                    THIS.cPrimaryKeyField = tcKeyField
+                ENDIF
+                
+                * Configure CursorAdapter for automatic updates
+                IF !EMPTY(lcTableName) AND !EMPTY(tcKeyField)
+                    THIS.MakeUpdatable(lcTableName, tcKeyField, .F.)
                 ENDIF
             ELSE
                 THIS.cLastError = "CursorFill failed: " + THIS.GetErrorMessage()
@@ -218,19 +231,21 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
     ***********************************************************************
     * SaveChanges - Save all modifications to database
     * 
+    * Uses CursorAdapter's automatic update mechanism via ApplyUpdates()
+    * CursorAdapter handles the update when Tables, KeyFieldList, 
+    * UpdatableFieldList, and UpdateNameList are properly configured.
+    *
     * Parameters:
-    *   tlForce - Force update all records
-    *   tlShowConflicts - Show conflicts if optimistic locking fails
+    *   tlForce - Not used (kept for compatibility)
+    *   tlShowConflicts - Not used (kept for compatibility)
     *
     * Returns: .T. if successful, .F. otherwise
     ***********************************************************************
     FUNCTION SaveChanges(tlForce, tlShowConflicts)
         LOCAL llSuccess, lnUpdated, lnInserted, lnDeleted, lcAlias
-        LOCAL llForce, llShowConflicts, lcOldAlias
+        LOCAL lcOldAlias, lnConflicts
         
         llSuccess = .F.
-        llForce = VARTYPE(tlForce) = "L" AND tlForce
-        llShowConflicts = VARTYPE(tlShowConflicts) = "L" AND tlShowConflicts
         lcAlias = THIS.Alias
         lcOldAlias = ALIAS()
         
@@ -253,6 +268,12 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
                     THIS.cLastError = "Data validation failed"
                     RETURN .F.
                 ENDIF
+            ENDIF
+            
+            * Check if CursorAdapter is properly configured for updates
+            IF EMPTY(THIS.Tables) OR EMPTY(THIS.KeyFieldList)
+                THIS.cLastError = "CursorAdapter not configured for updates. Call MakeUpdatable() first."
+                RETURN .F.
             ENDIF
             
             * Begin transaction if auto-commit is off
@@ -279,13 +300,11 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
                 ENDCASE
             ENDSCAN
             
-            * Perform table update using VFP's TABLEUPDATE() function
-            * NOTE: TABLEUPDATE() is a VFP built-in function, NOT a CursorAdapter method!
-            * TABLEUPDATE(nRows, lForce, cTableAlias)
-            *   nRows: 1 = update all rows (silent), 2 = update all rows (show conflicts)
-            *   lForce: .T. = force update overwriting conflicts, .F. = stop on conflict
-            lnRows = IIF(llShowConflicts, 2, 1)  && 2 = show conflicts, 1 = silent
-            llSuccess = TABLEUPDATE(lnRows, llForce, lcAlias)
+            * Use CursorAdapter's ApplyUpdates() to save changes
+            * This relies on Tables, KeyFieldList, UpdatableFieldList, UpdateNameList
+            * being properly configured by MakeUpdatable()
+            lnConflicts = THIS.ApplyUpdates()
+            llSuccess = (lnConflicts = 0)
             
             IF llSuccess
                 * Update statistics
@@ -308,7 +327,7 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
                     "Saved changes: " + TRANSFORM(lnInserted) + " inserted, " + ;
                     TRANSFORM(lnUpdated) + " updated, " + TRANSFORM(lnDeleted) + " deleted")
             ELSE
-                THIS.cLastError = "TableUpdate failed: " + THIS.GetErrorMessage()
+                THIS.cLastError = "ApplyUpdates failed with " + TRANSFORM(lnConflicts) + " conflicts"
                 THIS.LogError(THIS.cLastError)
                 
                 * Rollback transaction if not auto-commit
@@ -781,6 +800,119 @@ DEFINE CLASS PooledCursorAdapter AS CursorAdapter
             THIS.LogError("DetectPrimaryKey error: " + loException.Message, loException)
         ENDTRY
     ENDPROC
+    
+    ***********************************************************************
+    * PROTECTED: MakeUpdatable - Configure CursorAdapter for automatic updates
+    * 
+    * This method configures the CursorAdapter's update properties so that
+    * ApplyUpdates() can automatically save changes to the backend database.
+    *
+    * Parameters:
+    *   tcTableName - Backend table name (e.g., "Customers")
+    *   tcKeyField - Primary key field name (e.g., "CustomerID")
+    *   tlDoNotIncludeKey - Optional: Exclude key from updatable fields
+    ***********************************************************************
+    PROTECTED PROCEDURE MakeUpdatable(tcTableName, tcKeyField, tlDoNotIncludeKey)
+        LOCAL ix, lnUpdateableFCount, lcFieldName
+        
+        TRY
+            * Set the backend table name
+            THIS.Tables = tcTableName
+            
+            * Set the primary key field
+            THIS.KeyFieldList = tcKeyField
+            
+            * Build UpdatableFieldList and UpdateNameList
+            THIS.UpdatableFieldList = ""
+            THIS.UpdateNameList = ""
+            
+            * Get count of fields (excluding ADOBOOKMARK if present)
+            lnUpdateableFCount = FCOUNT(THIS.Alias)
+            IF THIS.DataSourceType = 'ADO'
+                lnUpdateableFCount = lnUpdateableFCount - 1  && Exclude last one (ADOBOOKMARK)
+            ENDIF
+            
+            * Loop through all fields
+            FOR ix = 1 TO lnUpdateableFCount
+                lcFieldName = FIELD(ix, THIS.Alias)
+                
+                * Add to UpdatableFieldList (optionally excluding key field)
+                IF !tlDoNotIncludeKey OR !(UPPER(lcFieldName) == UPPER(tcKeyField))
+                    THIS.UpdatableFieldList = THIS.UpdatableFieldList + ;
+                        IIF(EMPTY(THIS.UpdatableFieldList), '', ',') + lcFieldName
+                ENDIF
+                
+                * Add to UpdateNameList (maps cursor field to backend field)
+                * Format: "CursorField TableName.BackendField"
+                THIS.UpdateNameList = THIS.UpdateNameList + ;
+                    IIF(EMPTY(THIS.UpdateNameList), '', ',') + ;
+                    lcFieldName + " " + tcTableName + "." + lcFieldName
+            ENDFOR
+            
+            THIS.LogOperation("CONFIG", "Configured for updates: Table=" + tcTableName + ", Key=" + tcKeyField)
+            
+        CATCH TO loException
+            THIS.LogError("MakeUpdatable error: " + loException.Message, loException)
+        ENDTRY
+    ENDPROC
+    
+    ***********************************************************************
+    * PROTECTED: ExtractTableName - Extract table name from SELECT statement
+    ***********************************************************************
+    PROTECTED FUNCTION ExtractTableName(tcSelectCmd)
+        LOCAL lcSQL, lcTableName, lnFromPos, lnWherePos, lnJoinPos, lnEndPos
+        
+        lcTableName = ""
+        
+        TRY
+            * Convert to uppercase for parsing
+            lcSQL = UPPER(ALLTRIM(tcSelectCmd))
+            
+            * Find FROM keyword
+            lnFromPos = AT(" FROM ", lcSQL)
+            IF lnFromPos = 0
+                RETURN ""
+            ENDIF
+            
+            * Start after FROM
+            lcSQL = SUBSTR(lcSQL, lnFromPos + 6)
+            lcSQL = LTRIM(lcSQL)
+            
+            * Find end of table name (WHERE, JOIN, ORDER, GROUP, or end of string)
+            lnWherePos = AT(" WHERE ", lcSQL)
+            lnJoinPos = AT(" JOIN ", lcSQL)
+            lnEndPos = LEN(lcSQL) + 1
+            
+            * Get the nearest delimiter
+            IF lnWherePos > 0
+                lnEndPos = MIN(lnEndPos, lnWherePos)
+            ENDIF
+            IF lnJoinPos > 0
+                lnEndPos = MIN(lnEndPos, lnJoinPos)
+            ENDIF
+            
+            * Extract table name
+            lcTableName = ALLTRIM(LEFT(lcSQL, lnEndPos - 1))
+            
+            * Remove schema/database prefix if present (e.g., "dbo.Customers" -> "Customers")
+            IF "." $ lcTableName
+                lcTableName = SUBSTR(lcTableName, AT(".", lcTableName, 2) + 1)
+                IF "." $ lcTableName
+                    lcTableName = SUBSTR(lcTableName, AT(".", lcTableName) + 1)
+                ENDIF
+            ENDIF
+            
+            * Remove alias if present (e.g., "Customers c" -> "Customers")
+            IF " " $ lcTableName
+                lcTableName = LEFT(lcTableName, AT(" ", lcTableName) - 1)
+            ENDIF
+            
+        CATCH TO loException
+            THIS.LogError("ExtractTableName error: " + loException.Message, loException)
+        ENDTRY
+        
+        RETURN lcTableName
+    ENDFUNC
     
     ***********************************************************************
     * PROTECTED: DeleteRelatedRecords - Delete related records (cascade)
